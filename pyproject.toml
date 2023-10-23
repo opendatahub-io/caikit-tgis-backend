@@ -24,4 +24,4 @@ namespaces = false
 Source = "https://github.com/caikit/caikit-tgis-backend"
 
 [tool.setuptools_scm]
-version_file = "caikit_tgis_backend/_version.py"
+write_to = "caikit_tgis_backend/_version.py"
