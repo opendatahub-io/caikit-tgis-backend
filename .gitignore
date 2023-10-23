@@ -19,3 +19,4 @@ venv/
 *.DS_Store
 # Tox envs
 .tox
+/caikit_tgis_backend/_version.py
