@@ -701,3 +701,4 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
     assert tgis_be.is_started
     conn = tgis_be.get_connection(model_id)
     conn.test_connection()
+    conn.test_connection(timeout=1)
