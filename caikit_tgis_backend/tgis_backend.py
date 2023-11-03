@@ -69,6 +69,7 @@ class TGISBackend(BackendBase):
         self._managed_tgis = None
         self._model_connections = {}
         self._test_connections = self.config.get("test_connections", False)
+        self._connect_timeout = self.config.get("connect_timeout", None)
 
         # Parse the config to see if we're managing a connection to a remote
         # TGIS instance or running a local copy
@@ -108,7 +109,7 @@ class TGISBackend(BackendBase):
             )
             if self._test_connections:
                 try:
-                    model_conn.test_connection()
+                    model_conn.test_connection(timeout=self._connect_timeout)
                 except grpc.RpcError as err:
                     log.warning(
                         "<TGB95244222W>",

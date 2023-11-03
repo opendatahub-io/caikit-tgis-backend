@@ -297,12 +297,15 @@ class TGISConnection:
             self._client = load_balancer.client
         return self._client
 
-    def test_connection(self):
+    def test_connection(self, timeout: Optional[float] = None):
         """Test whether the connection is valid. If not valid, an appropriate
         grpc.RpcError will be raised
         """
         client = self.get_client()
-        client.ModelInfo(generation_pb2.ModelInfoRequest(model_id=self.model_id))
+        client.ModelInfo(
+            generation_pb2.ModelInfoRequest(model_id=self.model_id),
+            timeout=timeout,
+        )
 
     @staticmethod
     def _load_tls_file(file_path: Optional[str]) -> Optional[bytes]:
