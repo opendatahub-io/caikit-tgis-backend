@@ -147,7 +147,11 @@ class GRPCLoadBalancerProxy(Generic[T]):
 
                 self._ip_set = new_ip_set
             except (socket.gaierror, socket.herror):
-                log.warning("Failed to poll DNS for updates", exc_info=True)
+                log.debug3(
+                    "Failed to poll DNS for updates to service: %s",
+                    self.target,
+                    exc_info=True,
+                )
 
             except Exception as ex:  # pylint: disable=broad-exception-caught
                 log.warning(
