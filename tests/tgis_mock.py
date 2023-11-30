@@ -142,17 +142,20 @@ class TGISMock:
         prompt_responses: Optional[Dict[str, str]] = None,
         health_delay: float = 0.0,
         san_list: List[str] = None,
+        grpc_port: Optional[int] = None,
+        http_port: Optional[int] = None,
     ):
         self.prompt_responses = prompt_responses
         self.health_delay = health_delay
 
         # find ports for the servers
-        self.grpc_port = tls_test_tools.open_port()
+        self.grpc_port = grpc_port or tls_test_tools.open_port()
         self.hostname = f"localhost:{self.grpc_port}"
-
-        self.http_port = tls_test_tools.open_port()
+        self.http_port = http_port or tls_test_tools.open_port()
 
         # generate TLS certificates
+        self.tls = tls
+        self.mtls = mtls
         if tls or mtls:
             self.ca_key = tls_test_tools.generate_key()[0]
             self.ca_cert = tls_test_tools.generate_ca_cert(self.ca_key)

@@ -24,6 +24,7 @@ import time
 # Third Party
 import grpc
 import pytest
+import tls_test_tools
 
 # First Party
 import caikit
@@ -243,6 +244,36 @@ def test_stop():
     assert not tgis_be.is_started
     assert not tgis_be.get_connection(model_id1, False)
     assert not tgis_be.get_connection(model_id2, False)
+
+
+def test_lazy_start_remote_model():
+    """Make sure that an entry in the remote_models config can be respected even
+    if it is invalid at instantiation and test_connections is enabled
+    """
+    # Set up a TGIS connection that will not be valid yet
+    port = tls_test_tools.open_port()
+    model_name = "some-model"
+    cfg = {
+        "remote_models": {model_name: {"hostname": f"localhost:{port}"}},
+        "test_connections": True,
+    }
+
+    # Initialize the backend and make sure getting the model's connection
+    # returns None
+    tgis_be = TGISBackend(cfg)
+    assert tgis_be.get_connection(model_name) is None
+
+    # Now boot the TGIS instance and try again
+    with TGISMock(grpc_port=port):
+        max_time = 5
+        start_time = time.time()
+        conn = None
+        while time.time() - start_time < max_time:
+            conn = tgis_be.get_connection(model_name)
+            if conn:
+                break
+            time.sleep(0.1)
+        assert conn
 
 
 ## Local Subprocess ############################################################
