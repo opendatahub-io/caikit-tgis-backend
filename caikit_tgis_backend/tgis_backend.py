@@ -250,6 +250,11 @@ class TGISBackend(BackendBase):
         error.value_check(
             "<TGB99822514E>", conn is not None, "Unknown model {}", model_id
         )
+        log.debug3(
+            "Unloading prompt artifacts for model: %s, prompts: %s",
+            model_id,
+            prompt_ids,
+        )
         conn.unload_prompt_artifacts(*prompt_ids)
 
     @property
