@@ -578,6 +578,21 @@ def test_tgis_backend_config_load_prompt_artifacts():
                 os.path.join(bar_prompt_dir, prompt_id2, source_fnames[1])
             )
 
+            # piggy-back to test unloading prompt artifacts
+            tgis_be.unload_prompt_artifacts("bar", prompt_id1, prompt_id2)
+            assert os.path.exists(
+                os.path.join(foo_prompt_dir, prompt_id1, source_fnames[0])
+            )
+            assert os.path.exists(
+                os.path.join(foo_prompt_dir, prompt_id2, source_fnames[1])
+            )
+            assert not os.path.exists(
+                os.path.join(bar_prompt_dir, prompt_id1, source_fnames[0])
+            )
+            assert not os.path.exists(
+                os.path.join(bar_prompt_dir, prompt_id2, source_fnames[1])
+            )
+
             # Make sure non-prompt models raise
             with pytest.raises(ValueError):
                 tgis_be.load_prompt_artifacts("baz", prompt_id1, source_files[0])
