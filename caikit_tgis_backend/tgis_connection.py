@@ -223,7 +223,7 @@ class TGISConnection:
             log.debug3("Copying %s -> %s", artifact_path, target_file)
             shutil.copyfile(artifact_path, target_file)
 
-    def unload_prompt_artifacts(self, *prompt_ids: List[str]):
+    def unload_prompt_artifacts(self, *prompt_ids: str):
         """Unload the given prompts from TGIS
 
         As implemented, this simply removes the prompt artifacts for these IDs
@@ -235,7 +235,7 @@ class TGISConnection:
             accept that it's already deleted.
 
         Args:
-            *prompt_ids (List[str]): The IDs to unload
+            *prompt_ids (str): The IDs to unload
         """
         error.value_check(
             "<TGB07970365E>",
