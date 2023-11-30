@@ -244,6 +244,14 @@ class TGISBackend(BackendBase):
         )
         conn.load_prompt_artifacts(prompt_id, *prompt_artifacts)
 
+    def unload_prompt_artifacts(self, model_id: str, *prompt_ids: str):
+        """Unload all the artifacts for the prompt ids provided with base model model_id"""
+        conn = self.get_connection(model_id)
+        error.value_check(
+            "<TGB99822514E>", conn is not None, "Unknown model {}", model_id
+        )
+        conn.unload_prompt_artifacts(*prompt_ids)
+
     @property
     def local_tgis(self) -> bool:
         return self._local_tgis
