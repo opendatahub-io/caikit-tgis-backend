@@ -147,6 +147,54 @@ def test_tgis_backend_config_valid_tls(tgis_mock_tls):
     assert not conn.mtls_enabled
 
 
+def test_tgis_backend_tls_hn_override(tgis_mock_tls):
+    hn_override = "foo.com"
+    tgis_be = TGISBackend(
+        {
+            "connection": {
+                "hostname": tgis_mock_tls.hostname,
+                "ca_cert_file": tgis_mock_tls.ca_cert_file,
+                "hostname_override": hn_override,
+            },
+        }
+    )
+    model_id = "test-model"
+    # This should fail- foo.com not in cert
+    with pytest.raises(grpc.RpcError):
+        tgis_be.get_client(model_id).Generate(
+            generation_pb2.BatchedGenerationRequest(
+                requests=[
+                    generation_pb2.GenerationRequest(text="Hello world"),
+                ],
+            ),
+        )
+
+    # Now make a new mock with "foo.com" in the SAN list and make sure it does work
+    with TGISMock(tls=True, san_list=[hn_override]) as foo_com_mock:
+        tgis_be = TGISBackend(
+            {
+                "connection": {
+                    "hostname": foo_com_mock.hostname,
+                    "ca_cert_file": foo_com_mock.ca_cert_file,
+                    "hostname_override": hn_override,
+                },
+            }
+        )
+        model_id = "test-model"
+        tgis_be.get_client(model_id).Generate(
+            generation_pb2.BatchedGenerationRequest(
+                requests=[
+                    generation_pb2.GenerationRequest(text="Hello world"),
+                ],
+            ),
+        )
+        assert tgis_be.is_started
+        conn = tgis_be.get_connection(model_id)
+        assert conn
+        assert conn.tls_enabled
+        assert not conn.mtls_enabled
+
+
 def test_tgis_backend_config_valid_mtls(tgis_mock_mtls):
     """Make sure that the TGIS backend can be configured with a valid config
     blob for an mTLS server

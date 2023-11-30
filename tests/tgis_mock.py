@@ -17,7 +17,7 @@ TGIS mock
 
 # Standard
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import os
 import re
 import tempfile
@@ -141,6 +141,7 @@ class TGISMock:
         mtls: bool = False,
         prompt_responses: Optional[Dict[str, str]] = None,
         health_delay: float = 0.0,
+        san_list: List[str] = None,
     ):
         self.prompt_responses = prompt_responses
         self.health_delay = health_delay
@@ -158,7 +159,9 @@ class TGISMock:
             (
                 self.server_key,
                 self.server_cert,
-            ) = tls_test_tools.generate_derived_key_cert_pair(self.ca_key)
+            ) = tls_test_tools.generate_derived_key_cert_pair(
+                self.ca_key, san_list=san_list
+            )
 
         # generate these now, write them out to disk in start()
         if mtls:
@@ -166,7 +169,7 @@ class TGISMock:
                 self.client_key,
                 self.client_cert,
             ) = tls_test_tools.generate_derived_key_cert_pair(
-                self.ca_key,
+                self.ca_key, san_list=san_list
             )
 
         # write certificates to files to be used by clients

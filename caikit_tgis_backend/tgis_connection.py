@@ -56,6 +56,8 @@ class TGISConnection:
     ca_cert_file: Optional[str] = None
     # Paths to client key/cert pair when TGIS requires mTLS
     client_tls: Optional[TLSFilePair] = None
+    # TLS HN override
+    tls_hostname_override: str = None
     # Mounted directory where TGIS will look for prompt vector artifacts
     prompt_dir: Optional[str] = None
     # Load balancing policy
@@ -77,6 +79,7 @@ class TGISConnection:
     PROMPT_DIR_KEY = "prompt_dir"
     LB_POLICY_KEY = "grpc_lb_policy_name"
     LB_POLL_INTERVAL_KEY = "grpc_lb_poll_interval_s"
+    TLS_HN_OVERRIDE_KEY = "hostname_override"
 
     @classmethod
     def from_config(cls, model_id: str, config: dict) -> Optional["TGISConnection"]:
@@ -89,6 +92,8 @@ class TGISConnection:
                 }
             )
             log.debug("Resolved hostname [%s] for model %s", hostname, model_id)
+
+            tls_hostname_override = config.get(cls.TLS_HN_OVERRIDE_KEY)
 
             lb_policy = config.get(cls.LB_POLICY_KEY) or None
             error.type_check(
@@ -177,6 +182,7 @@ class TGISConnection:
                 model_id=model_id,
                 ca_cert_file=ca_cert,
                 client_tls=client_tls,
+                tls_hostname_override=tls_hostname_override,
                 prompt_dir=prompt_dir,
                 lb_policy=lb_policy,
                 lb_poll_interval_s=lb_poll_interval_s,
@@ -283,6 +289,17 @@ class TGISConnection:
                     )
                 credentials = grpc.ssl_channel_credentials(**creds_kwargs)
                 load_balancer_kwargs["credentials"] = credentials
+
+                if self.tls_hostname_override:
+                    # using a list for the opts so that they can be appended to later if necessary
+                    channel_opts = [
+                        (
+                            "grpc.ssl_target_name_override",
+                            self.tls_hostname_override,
+                        )
+                    ]
+                    # kwarg name for the GRPCLoadBalancerProxy init
+                    load_balancer_kwargs["channel_options"] = channel_opts
 
             # Override the lb policy, if configured.
             # The load balancer will always provide a default if we don't pass one.
