@@ -250,6 +250,9 @@ class TGISConnection:
         )
         for prompt_id in prompt_ids:
             prompt_id_dir = os.path.join(self.prompt_dir, prompt_id)
+            log.debug3(
+                "Unloading prompt artifact %s at path %s", prompt_id, prompt_id_dir
+            )
             shutil.rmtree(prompt_id_dir, ignore_errors=True)
 
     def get_client(self) -> generation_pb2_grpc.GenerationServiceStub:
