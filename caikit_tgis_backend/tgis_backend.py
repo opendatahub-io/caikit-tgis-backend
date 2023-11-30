@@ -75,8 +75,8 @@ class TGISBackend(BackendBase):
         # TGIS instance or running a local copy
         connection_cfg = self.config.get("connection") or {}
         error.type_check("<TGB20235229E>", dict, connection=connection_cfg)
-        remote_models_cfg = self.config.get("remote_models") or {}
-        error.type_check("<TGB20235338E>", dict, connection=remote_models_cfg)
+        self._remote_models_cfg = self.config.get("remote_models") or {}
+        error.type_check("<TGB20235338E>", dict, connection=self._remote_models_cfg)
         local_cfg = self.config.get("local") or {}
         error.type_check("<TGB20235225E>", dict, local=local_cfg)
 
@@ -99,7 +99,7 @@ class TGISBackend(BackendBase):
         )
 
         # Parse connection objects for all model-specific connections
-        for model_id, model_conn_cfg in remote_models_cfg.items():
+        for model_id, model_conn_cfg in self._remote_models_cfg.items():
             model_conn = TGISConnection.from_config(model_id, model_conn_cfg)
             error.value_check(
                 "<TGB90377847E>",
@@ -124,7 +124,7 @@ class TGISBackend(BackendBase):
 
         # We manage a local TGIS instance if there are no remote connections
         # specified as either a valid base connection or remote_connections
-        self._local_tgis = not self._base_connection_cfg and not self._model_connections
+        self._local_tgis = not self._base_connection_cfg and not self._remote_models_cfg
         log.info("Running %s TGIS backend", "LOCAL" if self._local_tgis else "REMOTE")
 
         if self._local_tgis:
@@ -172,13 +172,9 @@ class TGISBackend(BackendBase):
     ) -> Optional[TGISConnection]:
         """Get the TGISConnection object for the given model"""
         model_conn = self._model_connections.get(model_id)
-        if (
-            not model_conn
-            and create
-            and not self.local_tgis
-            and self._base_connection_cfg
-        ):
-            model_conn = TGISConnection.from_config(model_id, self._base_connection_cfg)
+        conn_cfg = self._remote_models_cfg.get(model_id, self._base_connection_cfg)
+        if not model_conn and create and not self.local_tgis and conn_cfg:
+            model_conn = TGISConnection.from_config(model_id, conn_cfg)
             if self._test_connections:
                 try:
                     model_conn.test_connection()
