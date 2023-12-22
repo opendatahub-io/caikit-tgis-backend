@@ -29,8 +29,8 @@ model_management:
             config:
               connection:
                 hostname: "localhost:8033"
-                test_connections: true
                 connect_timeout: 30
+              test_connections: true
 
 log:
   formatter: pretty
