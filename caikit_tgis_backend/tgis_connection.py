@@ -245,8 +245,9 @@ class TGISConnection:
             log.debug3("Copying %s -> %s", artifact_path, target_file)
             shutil.copyfile(artifact_path, swp_file)
 
-            # Rename on completion of copy
-            os.rename(swp_file, target_file)
+            # Rename on completion of copy using replace
+            # Replace silently overrides the destination irrespective of OS
+            os.replace(swp_file, target_file)
 
     def unload_prompt_artifacts(self, *prompt_ids: str):
         """Unload the given prompts from TGIS
