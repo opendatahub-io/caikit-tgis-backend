@@ -16,6 +16,7 @@ Unit tests for the TGISConnection class
 """
 # Standard
 from contextlib import contextmanager
+from pathlib import Path
 import os
 import tempfile
 
@@ -223,6 +224,51 @@ def tests_load_prompt_artifacts_dont_copy_existing_files():
                 assert os.path.exists(fname)
                 with open(fname, "r", encoding="utf8") as f:
                     assert f.read() == "old stub"
+
+
+def tests_load_prompt_artifacts_exclude_swp_files():
+    """Make sure that swp files in the prompt_dir causes the source file to be excluded.
+    This assumes another process is by copying other files."""
+    with tempfile.TemporaryDirectory() as source_dir:
+        with tempfile.TemporaryDirectory() as prompt_dir:
+            prompt_id = "some-prompt-id"
+
+            # Make some source files and prompt files
+            fnames = ["foo.pt", "bar.pt"]
+            source_files = [os.path.join(source_dir, fname) for fname in fnames]
+            for fname in source_files:
+                with open(fname, "w", encoding="utf8") as f:
+                    f.write("new stub")
+
+            # Make some source files and prompt files
+            # Output path: prompt_dir / prompt_id / prompt_file.pt
+            target_dir = Path(prompt_dir) / prompt_id
+            os.mkdir(target_dir)
+            swp_file = os.path.join(prompt_dir, prompt_id, "bar.swp")
+            with open(swp_file, "w", encoding="utf8") as f:
+                f.write("in progress")
+
+            # Make the connection with the prompt dir
+            conn = TGISConnection.from_config(
+                "",
+                {
+                    TGISConnection.HOSTNAME_KEY: "foo.bar:1234",
+                    TGISConnection.PROMPT_DIR_KEY: prompt_dir,
+                },
+            )
+
+            # Copy the artifacts over
+            conn.load_prompt_artifacts(prompt_id, *source_files)
+
+            # Make sure the correct artifacts are available
+            expected_prompt_files = {"foo.pt", "bar.swp"}
+            assert {
+                f.name for f in Path(target_dir).iterdir()
+            } == expected_prompt_files, "Incorrect files were copied"
+            with open(target_dir / "foo.pt", "r", encoding="utf8") as f:
+                assert f.read() == "new stub", "File was not copied to prompt_dir"
+            with open(target_dir / "bar.swp", "r", encoding="utf8") as f:
+                assert f.read() == "in progress", "Swap file should not be overwritten"
 
 
 def test_unload_prompt_artifacts_ok():

@@ -14,9 +14,10 @@
 """Encapsulate the creation of a TGIS Connection"""
 
 # Standard
+from collections.abc import Container
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TypeAlias, Union
 import os
 import shutil
 
@@ -33,6 +34,8 @@ from .protobufs import generation_pb2, generation_pb2_grpc
 
 log = alog.use_channel("TGCONN")
 error = error_handler.get(log)
+
+StrPath: TypeAlias = Union[str, os.PathLike[str]]
 
 
 @dataclass
@@ -227,14 +230,22 @@ class TGISConnection:
         # Don't copy files which are already in the target_dir
         existing_artifacts = {f.name for f in target_dir.iterdir()}
         new_artifacts = {
-            Path(f) for f in artifact_paths if Path(f).name not in existing_artifacts
+            Path(f)
+            for f in artifact_paths
+            if file_or_swp_not_in_listing(Path(f).name, existing_artifacts)
         }
 
         for artifact_path in new_artifacts:
             error.file_check("<TGB14818050E>", artifact_path)
             target_file = target_dir / artifact_path.name
+            swp_file = target_file.with_name(target_file.name + ".swp")
+
+            # Copy file as a swap file
             log.debug3("Copying %s -> %s", artifact_path, target_file)
-            shutil.copyfile(artifact_path, target_file)
+            shutil.copyfile(artifact_path, swp_file)
+
+            # Rename on completion of copy
+            os.rename(swp_file, target_file)
 
     def unload_prompt_artifacts(self, *prompt_ids: str):
         """Unload the given prompts from TGIS
@@ -351,3 +362,15 @@ class TGISConnection:
             )
             with open(file_path, "rb") as handle:
                 return handle.read()
+
+
+def file_or_swp_not_in_listing(
+    filename: StrPath, file_listing: Container[str], swap_extension: str = ".swp"
+) -> bool:
+    """Determine if the file, or its swap variant, is in the file listing."""
+    file = Path(filename)
+
+    return (
+        file.name not in file_listing
+        and file.with_suffix(swap_extension).name not in file_listing
+    )
