@@ -17,7 +17,7 @@
 from collections.abc import Container
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, TypeAlias, Union
+from typing import Optional, Union
 import os
 import shutil
 
@@ -35,7 +35,7 @@ from .protobufs import generation_pb2, generation_pb2_grpc
 log = alog.use_channel("TGCONN")
 error = error_handler.get(log)
 
-StrPath: TypeAlias = Union[str, os.PathLike[str]]
+StrPath = Union[str, os.PathLike[str]]
 
 
 @dataclass
