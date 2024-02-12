@@ -224,15 +224,16 @@ class TGISConnection:
             str,
             artifact_paths=artifact_paths,
         )
+
         target_dir = Path(self.prompt_dir) / prompt_id
         os.makedirs(target_dir, exist_ok=True)
 
         # Don't copy files which are already in the target_dir
-        existing_artifacts = {f.name for f in target_dir.iterdir()}
+        existing_artifact_names = {f.name for f in target_dir.iterdir()}
         new_artifacts = {
             Path(f)
             for f in artifact_paths
-            if file_or_swp_not_in_listing(Path(f).name, existing_artifacts)
+            if file_or_swp_not_in_listing(Path(f).name, existing_artifact_names)
         }
 
         for artifact_path in new_artifacts:
