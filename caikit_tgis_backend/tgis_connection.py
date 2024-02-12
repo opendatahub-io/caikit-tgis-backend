@@ -15,7 +15,8 @@
 
 # Standard
 from dataclasses import dataclass
-from typing import List, Optional
+from pathlib import Path
+from typing import Optional
 import os
 import shutil
 
@@ -43,7 +44,6 @@ class TLSFilePair:
 # pylint: disable=too-many-instance-attributes
 @dataclass
 class TGISConnection:
-
     #################
     # Class members #
     #################
@@ -57,7 +57,7 @@ class TGISConnection:
     # Paths to client key/cert pair when TGIS requires mTLS
     client_tls: Optional[TLSFilePair] = None
     # TLS HN override
-    tls_hostname_override: str = None
+    tls_hostname_override: Optional[str] = None
     # Mounted directory where TGIS will look for prompt vector artifacts
     prompt_dir: Optional[str] = None
     # Load balancing policy
@@ -196,7 +196,7 @@ class TGISConnection:
     def mtls_enabled(self) -> bool:
         return None not in [self.ca_cert_file, self.client_tls]
 
-    def load_prompt_artifacts(self, prompt_id: str, *artifact_paths: List[str]):
+    def load_prompt_artifacts(self, prompt_id: str, *artifact_paths: str):
         """Load the given artifact paths to this TGIS connection
 
         As implemented, this is a simple copy to the TGIS instance's prompt dir,
@@ -208,7 +208,7 @@ class TGISConnection:
 
         Args:
             prompt_id (str): The ID that this prompt should use
-            *artifact_paths (List[str]): The paths to the artifacts to laod
+            *artifact_paths (Tuple[str]): The paths to the artifacts to load
         """
         error.value_check(
             "<TGB07970356E>",
@@ -221,11 +221,18 @@ class TGISConnection:
             str,
             artifact_paths=artifact_paths,
         )
-        target_dir = os.path.join(self.prompt_dir, prompt_id)
+        target_dir = Path(self.prompt_dir) / prompt_id
         os.makedirs(target_dir, exist_ok=True)
-        for artifact_path in artifact_paths:
+
+        # Don't copy files which are already in the target_dir
+        existing_artifacts = {f.name for f in target_dir.iterdir()}
+        new_artifacts = {
+            Path(f) for f in artifact_paths if Path(f).name not in existing_artifacts
+        }
+
+        for artifact_path in new_artifacts:
             error.file_check("<TGB14818050E>", artifact_path)
-            target_file = os.path.join(target_dir, os.path.basename(artifact_path))
+            target_file = target_dir / artifact_path.name
             log.debug3("Copying %s -> %s", artifact_path, target_file)
             shutil.copyfile(artifact_path, target_file)
 

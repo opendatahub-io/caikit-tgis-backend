@@ -142,7 +142,6 @@ def test_load_prompt_artifacts_bad_source_file():
     """
     with tempfile.TemporaryDirectory() as source_dir:
         with tempfile.TemporaryDirectory() as prompt_dir:
-
             # Make the connection with the prompt dir
             conn = TGISConnection.from_config(
                 "",
@@ -182,6 +181,48 @@ def test_load_prompt_artifacts_no_prompt_dir():
         prompt_id = "some-prompt-id"
         with pytest.raises(ValueError):
             conn.load_prompt_artifacts(prompt_id, *source_files)
+
+
+def tests_load_prompt_artifacts_dont_copy_existing_files():
+    """Make sure that only files which doesn't exist in the prompt dir is copied"""
+    with tempfile.TemporaryDirectory() as source_dir:
+        with tempfile.TemporaryDirectory() as prompt_dir:
+            prompt_id = "some-prompt-id"
+
+            # Make some source files and prompt files
+            fnames = ["foo.pt", "bar.pt"]
+            source_files = [os.path.join(source_dir, fname) for fname in fnames]
+            for fname in source_files:
+                with open(fname, "w", encoding="utf8") as f:
+                    f.write("new stub")
+
+            # Make some source files and prompt files
+            # Output path: prompt_dir / prompt_id / prompt_file.pt
+            os.mkdir(os.path.join(prompt_dir, prompt_id))
+            prompt_files = [
+                os.path.join(prompt_dir, prompt_id, fname) for fname in fnames
+            ]
+            for fname in prompt_files:
+                with open(fname, "w", encoding="utf8") as f:
+                    f.write("old stub")
+
+            # Make the connection with the prompt dir
+            conn = TGISConnection.from_config(
+                "",
+                {
+                    TGISConnection.HOSTNAME_KEY: "foo.bar:1234",
+                    TGISConnection.PROMPT_DIR_KEY: prompt_dir,
+                },
+            )
+
+            # Copy the artifacts over
+            conn.load_prompt_artifacts(prompt_id, *source_files)
+
+            # Make sure the artifacts are available
+            for fname in prompt_files:
+                assert os.path.exists(fname)
+                with open(fname, "r", encoding="utf8") as f:
+                    assert f.read() == "old stub"
 
 
 def test_unload_prompt_artifacts_ok():
