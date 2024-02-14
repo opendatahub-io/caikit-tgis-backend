@@ -13,6 +13,9 @@
 # limitations under the License.
 """Encapsulate the creation of a TGIS Connection"""
 
+# Future
+from __future__ import annotations
+
 # Standard
 from collections.abc import Container
 from dataclasses import dataclass
