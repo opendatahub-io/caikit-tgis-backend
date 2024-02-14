@@ -17,7 +17,7 @@
 from collections.abc import Container
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional
 import os
 import shutil
 
@@ -32,10 +32,12 @@ import alog
 from .load_balancing_proxy import GRPCLoadBalancerProxy
 from .protobufs import generation_pb2, generation_pb2_grpc
 
+if TYPE_CHECKING:
+    # Third Party
+    from _typeshed import StrPath
+
 log = alog.use_channel("TGCONN")
 error = error_handler.get(log)
-
-StrPath = Union[str, os.PathLike[str]]
 
 
 @dataclass
@@ -367,7 +369,7 @@ class TGISConnection:
 
 
 def file_or_swp_not_in_listing(
-    filename: StrPath, file_listing: Container[str], swap_extension: str = ".swp"
+    filename: "StrPath", file_listing: Container[str], swap_extension: str = ".swp"
 ) -> bool:
     """Determine if the file, or its swap variant, is in the file listing."""
     file = Path(filename)
