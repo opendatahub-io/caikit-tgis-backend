@@ -13,9 +13,14 @@
 # limitations under the License.
 """Encapsulate the creation of a TGIS Connection"""
 
+# Future
+from __future__ import annotations
+
 # Standard
+from collections.abc import Container
 from dataclasses import dataclass
-from typing import List, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 import os
 import shutil
 
@@ -30,6 +35,10 @@ import alog
 from .load_balancing_proxy import GRPCLoadBalancerProxy
 from .protobufs import generation_pb2, generation_pb2_grpc
 
+if TYPE_CHECKING:
+    # Third Party
+    from _typeshed import StrPath
+
 log = alog.use_channel("TGCONN")
 error = error_handler.get(log)
 
@@ -43,7 +52,6 @@ class TLSFilePair:
 # pylint: disable=too-many-instance-attributes
 @dataclass
 class TGISConnection:
-
     #################
     # Class members #
     #################
@@ -57,7 +65,7 @@ class TGISConnection:
     # Paths to client key/cert pair when TGIS requires mTLS
     client_tls: Optional[TLSFilePair] = None
     # TLS HN override
-    tls_hostname_override: str = None
+    tls_hostname_override: Optional[str] = None
     # Mounted directory where TGIS will look for prompt vector artifacts
     prompt_dir: Optional[str] = None
     # Load balancing policy
@@ -196,7 +204,7 @@ class TGISConnection:
     def mtls_enabled(self) -> bool:
         return None not in [self.ca_cert_file, self.client_tls]
 
-    def load_prompt_artifacts(self, prompt_id: str, *artifact_paths: List[str]):
+    def load_prompt_artifacts(self, prompt_id: str, *artifact_paths: str):
         """Load the given artifact paths to this TGIS connection
 
         As implemented, this is a simple copy to the TGIS instance's prompt dir,
@@ -208,7 +216,7 @@ class TGISConnection:
 
         Args:
             prompt_id (str): The ID that this prompt should use
-            *artifact_paths (List[str]): The paths to the artifacts to laod
+            *artifact_paths (Tuple[str]): The paths to the artifacts to load
         """
         error.value_check(
             "<TGB07970356E>",
@@ -221,13 +229,30 @@ class TGISConnection:
             str,
             artifact_paths=artifact_paths,
         )
-        target_dir = os.path.join(self.prompt_dir, prompt_id)
+
+        target_dir = Path(self.prompt_dir) / prompt_id
         os.makedirs(target_dir, exist_ok=True)
-        for artifact_path in artifact_paths:
+
+        # Don't copy files which are already in the target_dir
+        existing_artifact_names = {f.name for f in target_dir.iterdir()}
+        new_artifacts = {
+            Path(f)
+            for f in artifact_paths
+            if file_or_swp_not_in_listing(Path(f).name, existing_artifact_names)
+        }
+
+        for artifact_path in new_artifacts:
             error.file_check("<TGB14818050E>", artifact_path)
-            target_file = os.path.join(target_dir, os.path.basename(artifact_path))
+            target_file = target_dir / artifact_path.name
+            swp_file = target_file.with_name(target_file.name + ".swp")
+
+            # Copy file as a swap file
             log.debug3("Copying %s -> %s", artifact_path, target_file)
-            shutil.copyfile(artifact_path, target_file)
+            shutil.copyfile(artifact_path, swp_file)
+
+            # Rename on completion of copy using replace
+            # Replace silently overrides the destination irrespective of OS
+            os.replace(swp_file, target_file)
 
     def unload_prompt_artifacts(self, *prompt_ids: str):
         """Unload the given prompts from TGIS
@@ -344,3 +369,15 @@ class TGISConnection:
             )
             with open(file_path, "rb") as handle:
                 return handle.read()
+
+
+def file_or_swp_not_in_listing(
+    filename: "StrPath", file_listing: Container[str], swap_extension: str = ".swp"
+) -> bool:
+    """Determine if the file, or its swap variant, is in the file listing."""
+    file = Path(filename)
+
+    return (
+        file.name not in file_listing
+        and file.with_suffix(swap_extension).name not in file_listing
+    )
