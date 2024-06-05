@@ -97,7 +97,6 @@ class TGISConnection:
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
             assert isinstance(hostname, str)
-            # TODO: Namespace needs to be populated here as well into the hostname template
             namespace = config.get(cls.NAMESPACE_KEY)
 
             hostname = hostname.format_map(
@@ -114,7 +113,6 @@ class TGISConnection:
             )
 
             tls_hostname_override = config.get(cls.TLS_HN_OVERRIDE_KEY)
-
             lb_policy = config.get(cls.LB_POLICY_KEY) or None
             error.type_check(
                 "<TGB17223790E>",

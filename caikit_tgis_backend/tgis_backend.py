@@ -200,8 +200,6 @@ class TGISBackend(BackendBase):
     def register_model_connection(
         self, model_id: str, conn_cfg: Dict[str, Any]
     ) -> None:
-        # TODO: Is this method necessary? .get_client() -> .get_connection() which will create
-        # the connection in self._model_connections if it doesn't exist by default.
         model_conn = TGISConnection.from_config(model_id, conn_cfg)
         error.value_check("<TGB81270235E>", model_conn is not None)
 
@@ -223,6 +221,7 @@ class TGISBackend(BackendBase):
             #   threads would stimulate the creation of the connection
             #   concurrently, so just keep whichever dict update lands first
             self._model_connections.setdefault(model_id, model_conn)
+            self._remote_models_cfg.setdefault(model_id, conn_cfg)
 
     def get_client(self, model_id: str) -> generation_pb2_grpc.GenerationServiceStub:
         model_conn = self.get_connection(model_id)
