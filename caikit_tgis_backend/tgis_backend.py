@@ -103,10 +103,10 @@ class TGISBackend(BackendBase):
             model_conn = TGISConnection.from_config(model_id, model_conn_cfg)
 
             log.debug(
-                "model connection config is set to the following: %s", model_conn_cfg
+                "model connection config and model_id are set to the following: %s , %s",
+                model_conn_cfg,
+                model_id,
             )
-
-            log.debug("model_id is set to the following: %s", model_id)
             error.value_check(
                 "<TGB90377847E>",
                 model_conn is not None,
