@@ -11,12 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""This module implements a TGIS backend configuration
-"""
+"""This module implements a TGIS backend configuration"""
 
 # Standard
 from threading import Lock
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 # Third Party
 import grpc
@@ -34,6 +33,7 @@ from .tgis_connection import TGISConnection
 
 log = alog.use_channel("TGISBKND")
 error = error_handler.get(log)
+
 
 # pylint: disable=too-many-instance-attributes
 class TGISBackend(BackendBase):
@@ -67,7 +67,7 @@ class TGISBackend(BackendBase):
         self._mutex = Lock()
         self._local_tgis = None
         self._managed_tgis = None
-        self._model_connections = {}
+        self._model_connections: dict[str, TGISConnection] = {}
         self._test_connections = self.config.get("test_connections", False)
         self._connect_timeout = self.config.get("connect_timeout", None)
 
@@ -75,7 +75,9 @@ class TGISBackend(BackendBase):
         # TGIS instance or running a local copy
         connection_cfg = self.config.get("connection") or {}
         error.type_check("<TGB20235229E>", dict, connection=connection_cfg)
-        self._remote_models_cfg = self.config.get("remote_models") or {}
+        self._remote_models_cfg: dict[str, dict] = (
+            self.config.get("remote_models") or {}
+        )
         error.type_check("<TGB20235338E>", dict, connection=self._remote_models_cfg)
         local_cfg = self.config.get("local") or {}
         error.type_check("<TGB20235225E>", dict, local=local_cfg)
@@ -194,6 +196,31 @@ class TGISBackend(BackendBase):
                 #   concurrently, so just keep whichever dict update lands first
                 self._model_connections.setdefault(model_id, model_conn)
         return model_conn
+
+    def register_model_connection(
+        self, model_id: str, conn_cfg: dict[str, Any]
+    ) -> None:
+        model_conn = TGISConnection.from_config(model_id, conn_cfg)
+        error.value_check("<TGB81270235E>", model_conn is not None)
+
+        if self._test_connections:
+            try:
+                model_conn.test_connection()
+            except grpc.RpcError as err:
+                log.warning(
+                    "<TGB10601575W>",
+                    "Unable to connect to model %s: %s",
+                    model_id,
+                    err,
+                    exc_info=True,
+                )
+                model_conn = None
+        if model_conn is not None:
+            # NOTE: setdefault used here to avoid the need to hold the mutex
+            #   when running the connection test. It's possible that two
+            #   threads would stimulate the creation of the connection
+            #   concurrently, so just keep whichever dict update lands first
+            self._model_connections.setdefault(model_id, model_conn)
 
     def get_client(self, model_id: str) -> generation_pb2_grpc.GenerationServiceStub:
         model_conn = self.get_connection(model_id)

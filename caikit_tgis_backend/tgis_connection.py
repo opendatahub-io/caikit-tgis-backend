@@ -81,6 +81,7 @@ class TGISConnection:
 
     HOSTNAME_KEY = "hostname"
     HOSTNAME_TEMPLATE_MODEL_ID = "model_id"
+    # TODO: Add key for namespace here
     CA_CERT_FILE_KEY = "ca_cert_file"
     CLIENT_CERT_FILE_KEY = "client_cert_file"
     CLIENT_KEY_FILE_KEY = "client_key_file"
@@ -94,6 +95,7 @@ class TGISConnection:
         """Create an instance from a connection template and a model_id"""
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
+            # TODO: Namespace needs to be populated here as well into the hostname template
             hostname = hostname.format(
                 **{
                     cls.HOSTNAME_TEMPLATE_MODEL_ID: model_id,
