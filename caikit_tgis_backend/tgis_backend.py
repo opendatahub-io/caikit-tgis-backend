@@ -67,7 +67,7 @@ class TGISBackend(BackendBase):
         self._mutex = Lock()
         self._local_tgis = None
         self._managed_tgis = None
-        self._model_connections: dict[str, TGISConnection] = {}
+        self._model_connections: Dict[str, TGISConnection] = {}
         self._test_connections = self.config.get("test_connections", False)
         self._connect_timeout = self.config.get("connect_timeout", None)
 
@@ -75,7 +75,7 @@ class TGISBackend(BackendBase):
         # TGIS instance or running a local copy
         connection_cfg = self.config.get("connection") or {}
         error.type_check("<TGB20235229E>", dict, connection=connection_cfg)
-        self._remote_models_cfg: dict[str, dict] = (
+        self._remote_models_cfg: Dict[str, dict] = (
             self.config.get("remote_models") or {}
         )
         error.type_check("<TGB20235338E>", dict, connection=self._remote_models_cfg)
@@ -198,7 +198,7 @@ class TGISBackend(BackendBase):
         return model_conn
 
     def register_model_connection(
-        self, model_id: str, conn_cfg: dict[str, Any]
+        self, model_id: str, conn_cfg: Dict[str, Any]
     ) -> None:
         # TODO: Is this method necessary? .get_client() -> .get_connection() which will create
         # the connection in self._model_connections if it doesn't exist by default.
