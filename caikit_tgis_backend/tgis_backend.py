@@ -200,6 +200,8 @@ class TGISBackend(BackendBase):
     def register_model_connection(
         self, model_id: str, conn_cfg: dict[str, Any]
     ) -> None:
+        # TODO: Is this method necessary? .get_client() -> .get_connection() which will create
+        # the connection in self._model_connections if it doesn't exist by default.
         model_conn = TGISConnection.from_config(model_id, conn_cfg)
         error.value_check("<TGB81270235E>", model_conn is not None)
 
