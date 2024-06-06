@@ -101,6 +101,12 @@ class TGISBackend(BackendBase):
         # Parse connection objects for all model-specific connections
         for model_id, model_conn_cfg in self._remote_models_cfg.items():
             model_conn = TGISConnection.from_config(model_id, model_conn_cfg)
+
+            log.debug(
+                "model connection config and model_id are set to the following: %s , %s",
+                model_conn_cfg,
+                model_id,
+            )
             error.value_check(
                 "<TGB90377847E>",
                 model_conn is not None,
