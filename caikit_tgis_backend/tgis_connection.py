@@ -81,8 +81,6 @@ class TGISConnection:
 
     HOSTNAME_KEY = "hostname"
     HOSTNAME_TEMPLATE_MODEL_ID = "model_id"
-    NAMESPACE_KEY = "namespace"
-    HOSTNAME_TEMPLATE_NAMESPACE = "namespace"
     CA_CERT_FILE_KEY = "ca_cert_file"
     CLIENT_CERT_FILE_KEY = "client_cert_file"
     CLIENT_KEY_FILE_KEY = "client_key_file"
@@ -99,20 +97,13 @@ class TGISConnection:
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
             assert isinstance(hostname, str)
-            namespace = config.get(cls.NAMESPACE_KEY)
 
             hostname = hostname.format_map(
                 {
                     cls.HOSTNAME_TEMPLATE_MODEL_ID: model_id,
-                    cls.HOSTNAME_TEMPLATE_NAMESPACE: namespace,
                 }
             )
-            log.debug(
-                "Resolved hostname [%s] for model %s in namespace %s",
-                hostname,
-                model_id,
-                namespace,
-            )
+            log.debug("Resolved hostname [%s] for model %s", hostname, model_id)
 
             tls_hostname_override = config.get(cls.TLS_HN_OVERRIDE_KEY)
             lb_policy = config.get(cls.LB_POLICY_KEY) or None

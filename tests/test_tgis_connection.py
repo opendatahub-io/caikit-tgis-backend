@@ -79,30 +79,6 @@ def test_happy_path_template():
     )
 
 
-def test_happy_path_template_with_namespace():
-    template_model_id = "{{{}}}".format(TGISConnection.HOSTNAME_TEMPLATE_MODEL_ID)
-    template_namespace = "{{{}}}".format(TGISConnection.HOSTNAME_TEMPLATE_NAMESPACE)
-    template = (
-        f"{template_model_id}-predictor.'{template_namespace}'.svc.cluster.local:8033"
-    )
-
-    model_id = "some/model"
-    namespace = "byom4"
-    conn = TGISConnection.from_config(
-        model_id,
-        {
-            TGISConnection.HOSTNAME_KEY: template,
-            TGISConnection.NAMESPACE_KEY: namespace,
-        },
-    )
-    assert conn.hostname == template.format_map(
-        {
-            TGISConnection.HOSTNAME_TEMPLATE_MODEL_ID: model_id,
-            TGISConnection.HOSTNAME_TEMPLATE_NAMESPACE: namespace,
-        }
-    )
-
-
 def test_happy_path_tls(temp_ca_cert):
     conn = TGISConnection.from_config(
         "",

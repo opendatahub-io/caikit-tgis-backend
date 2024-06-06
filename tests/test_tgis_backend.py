@@ -32,7 +32,6 @@ import caikit
 # Local
 from caikit_tgis_backend import TGISBackend
 from caikit_tgis_backend.protobufs import generation_pb2
-from caikit_tgis_backend.tgis_connection import TGISConnection
 from tests.tgis_mock import (
     TGISMock,
     tgis_mock_insecure,
@@ -679,52 +678,6 @@ def test_tgis_backend_config_load_prompt_artifacts():
             # Make sure unknown model raises
             with pytest.raises(ValueError):
                 tgis_be.load_prompt_artifacts("buz", prompt_id1, source_files[0])
-
-
-def test_tgis_backend_register_model_connection():
-    """Test that register_model_connection correctly adds a TGISConnection to the _model_connections dictionary"""
-    tgis_be = TGISBackend(
-        {
-            "remote_models": {
-                "foo": {"hostname": "foo:123"},
-                "bar": {"hostname": "bar:123"},
-            },
-        }
-    )
-
-    new_model = {
-        "base_model_name": "newmodel_id1",
-        "connection_config": {
-            "hostname": "{model_id}.{namespace}.mycluster",
-            "namespace": "byom-1",
-            "grpc_lb_policy_name": "something",
-        },
-    }
-
-    # Assert new model is not in backend
-    assert new_model["base_model_name"] not in tgis_be._remote_models_cfg
-    assert new_model["base_model_name"] not in tgis_be._model_connections
-
-    # Register model
-    tgis_be.register_model_connection(
-        new_model["base_model_name"], new_model["connection_config"]
-    )
-    assert new_model["base_model_name"] in tgis_be._remote_models_cfg
-    assert new_model["base_model_name"] in tgis_be._model_connections
-    assert isinstance(
-        tgis_be._model_connections[new_model["base_model_name"]], TGISConnection
-    )
-    assert (
-        tgis_be._model_connections[new_model["base_model_name"]].hostname
-        == "newmodel_id1.byom-1.mycluster"
-    )
-
-    # Confirm get_connection works
-    conn = tgis_be.get_connection(new_model["base_model_name"], create=False)
-    assert isinstance(conn, TGISConnection)
-    assert conn.hostname == "newmodel_id1.byom-1.mycluster"
-    assert conn.model_id == new_model["base_model_name"]
-    assert conn.lb_policy == new_model["connection_config"]["grpc_lb_policy_name"]
 
 
 ## Failure Tests ###############################################################
