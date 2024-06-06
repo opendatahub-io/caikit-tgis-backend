@@ -96,7 +96,7 @@ class TGISConnection:
         """Create an instance from a connection template and a model_id"""
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
-            assert isinstance(hostname, str)
+            error.type_check("<TGB57775870E>", str, hostname=hostname)
 
             hostname = hostname.format_map(
                 {

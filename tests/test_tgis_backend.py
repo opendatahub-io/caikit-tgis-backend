@@ -16,6 +16,8 @@ Unit tests for TGIS backend
 """
 
 # Standard
+from dataclasses import asdict
+from typing import Any, Dict, Optional
 from unittest import mock
 import os
 import tempfile
@@ -680,101 +682,88 @@ def test_tgis_backend_config_load_prompt_artifacts():
                 tgis_be.load_prompt_artifacts("buz", prompt_id1, source_files[0])
 
 
-def test_tgis_backend_register_model_connection():
+@pytest.mark.parametrize(
+    argnames=["model_id", "conn_cfg", "fill", "expected_conn_cfg"],
+    argvalues=[
+        (
+            "model1",
+            None,
+            False,
+            {
+                "hostname": "localhost:1234",
+                "model_id": "model1",
+                "lb_policy": "abc",
+            },
+        ),
+        (
+            "model1",
+            None,
+            True,
+            {
+                "hostname": "localhost:1234",
+                "model_id": "model1",
+                "lb_policy": "abc",
+            },
+        ),
+        (
+            "model1",
+            {"hostname": "myhost"},
+            False,
+            {"hostname": "myhost", "model_id": "model1"},
+        ),
+        (
+            "model1",
+            {"hostname": "myhost"},
+            True,
+            {"hostname": "myhost", "model_id": "model1", "lb_policy": "abc"},
+        ),
+    ],
+)
+def test_tgis_backend_register_model_connection(
+    model_id: str,
+    conn_cfg: Optional[dict],
+    fill: bool,
+    expected_conn_cfg: Dict[str, Any],
+):
     """Test that register_model_connection correctly adds a TGISConnection to the _model_connections dictionary"""
     tgis_be = TGISBackend(
         {
-            "connection": {"hostname": "localhost:12345"},
-            "remote_models": {
-                "foo": {"hostname": "foo:123"},
-                "bar": {"hostname": "bar:123"},
-            },
+            "connection": {"hostname": "localhost:1234", "grpc_lb_policy_name": "abc"},
+            "remote_models": {},
         }
     )
 
-    model_no_conn = {
-        "base_model_name": "newmodel_id1",
-    }
-
     # Assert new model is not in backend
-    assert model_no_conn["base_model_name"] not in tgis_be._remote_models_cfg
-    assert model_no_conn["base_model_name"] not in tgis_be._model_connections
+    assert model_id not in tgis_be._remote_models_cfg
+    assert model_id not in tgis_be._model_connections
 
     # Register model
-    tgis_be.register_model_connection(model_no_conn["base_model_name"])
-    assert model_no_conn["base_model_name"] in tgis_be._remote_models_cfg
-    assert model_no_conn["base_model_name"] in tgis_be._model_connections
-    assert isinstance(
-        tgis_be._model_connections[model_no_conn["base_model_name"]], TGISConnection
-    )
-    assert (
-        tgis_be._model_connections[model_no_conn["base_model_name"]].hostname
-        == "localhost:12345"
-    ), "hostname must be populated from tgisbackend connection.hostname"
+    tgis_be.register_model_connection(model_id, conn_cfg, fill_with_defaults=fill)
+    assert model_id in tgis_be._remote_models_cfg
+    assert model_id in tgis_be._model_connections
+    assert isinstance(tgis_be._model_connections[model_id], TGISConnection)
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
 
     # Re-register -> no change to existing model
-    tgis_be.register_model_connection(
-        model_no_conn["base_model_name"],
-        {
-            "hostname": "{model_id}.mycluster",
-        },
-    )
-    assert (
-        tgis_be._model_connections[model_no_conn["base_model_name"]].hostname
-        == "localhost:12345"
-    ), "Existing connection should not be modified"
+    tgis_be.register_model_connection(model_id, {"hostname": "{model_id}.mycluster"})
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
 
     # Confirm get_connection works
-    conn = tgis_be.get_connection(model_no_conn["base_model_name"], create=False)
+    conn = tgis_be.get_connection(model_id, create=False)
     assert isinstance(conn, TGISConnection)
-    assert conn.hostname == "localhost:12345"
-    assert conn.model_id == model_no_conn["base_model_name"]
-
-
-def test_tgis_backend_register_model_connection_with_conn():
-    """Test that register_model_connection correctly adds a TGISConnection to the _model_connections dictionary"""
-    tgis_be = TGISBackend(
-        {
-            "connection": {"hostname": "localhost:12345"},
-            "remote_models": {
-                "foo": {"hostname": "foo:123"},
-                "bar": {"hostname": "bar:123"},
-            },
-        }
-    )
-
-    model_conn = {
-        "base_model_name": "newmodel_id1",
-        "connection_config": {
-            "hostname": "{model_id}.mycluster",
-            "grpc_lb_policy_name": "something",
-        },
-    }
-
-    # Assert new model is not in backend
-    assert model_conn["base_model_name"] not in tgis_be._remote_models_cfg
-    assert model_conn["base_model_name"] not in tgis_be._model_connections
-
-    # Register model
-    tgis_be.register_model_connection(
-        model_conn["base_model_name"], model_conn["connection_config"]
-    )
-    assert model_conn["base_model_name"] in tgis_be._remote_models_cfg
-    assert model_conn["base_model_name"] in tgis_be._model_connections
-    assert isinstance(
-        tgis_be._model_connections[model_conn["base_model_name"]], TGISConnection
-    )
-    assert (
-        tgis_be._model_connections[model_conn["base_model_name"]].hostname
-        == "newmodel_id1.mycluster"
-    )
-
-    # Confirm get_connection works
-    conn = tgis_be.get_connection(model_conn["base_model_name"], create=False)
-    assert isinstance(conn, TGISConnection)
-    assert conn.hostname == "newmodel_id1.mycluster"
-    assert conn.model_id == model_conn["base_model_name"]
-    assert conn.lb_policy == model_conn["connection_config"]["grpc_lb_policy_name"]
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
 
 
 ## Failure Tests ###############################################################
