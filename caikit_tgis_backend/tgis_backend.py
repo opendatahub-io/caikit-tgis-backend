@@ -207,8 +207,8 @@ class TGISBackend(BackendBase):
 
         If the model connection is already registered, do nothing.
 
-        Otherwise create and register the model connection using the TGISBackend's config connection,
-        or the `conn_cfg` if provided.
+        Otherwise create and register the model connection using the TGISBackend's
+        config connection, or the `conn_cfg` if provided.
         """
         if model_id in self._model_connections:
             # Model connection exists --> do nothing
