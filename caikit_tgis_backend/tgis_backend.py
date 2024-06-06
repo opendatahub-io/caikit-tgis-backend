@@ -198,9 +198,27 @@ class TGISBackend(BackendBase):
         return model_conn
 
     def register_model_connection(
-        self, model_id: str, conn_cfg: Dict[str, Any]
+        self,
+        model_id: str,
+        conn_cfg: Optional[Dict[str, Any]] = None,
     ) -> None:
-        model_conn = TGISConnection.from_config(model_id, conn_cfg)
+        """
+        Register a remote model connection.
+
+        If the model connection is already registered, do nothing.
+
+        Otherwise create and register the model connection using the TGISBackend's config connection,
+        or the `conn_cfg` if provided.
+        """
+        if model_id in self._model_connections:
+            # Model connection exists --> do nothing
+            return
+
+        # Create model connection...
+        if conn_cfg is None:
+            model_conn = TGISConnection.from_config(model_id, self._base_connection_cfg)
+        else:
+            model_conn = TGISConnection.from_config(model_id, conn_cfg)
         error.value_check("<TGB81270235E>", model_conn is not None)
 
         if self._test_connections:

@@ -92,7 +92,9 @@ class TGISConnection:
     TLS_HN_OVERRIDE_KEY = "hostname_override"
 
     @classmethod
-    def from_config(cls, model_id: str, config: dict) -> Optional["TGISConnection"]:
+    def from_config(
+        cls, model_id: str, config: Dict[str, Any]
+    ) -> Optional["TGISConnection"]:
         """Create an instance from a connection template and a model_id"""
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
