@@ -33,6 +33,10 @@ import caikit
 from caikit_tgis_backend import TGISBackend
 from caikit_tgis_backend.protobufs import generation_pb2
 from caikit_tgis_backend.tgis_connection import TGISConnection
+from tests.tgis_mock import tgis_mock_insecure  # noqa
+from tests.tgis_mock import tgis_mock_insecure_health_delay  # noqa
+from tests.tgis_mock import tgis_mock_mtls  # noqa
+from tests.tgis_mock import tgis_mock_tls  # noqa
 from tests.tgis_mock import TGISMock
 
 ## Helpers #####################################################################
