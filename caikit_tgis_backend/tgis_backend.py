@@ -190,6 +190,8 @@ class TGISBackend(BackendBase):
         """
         Register a remote model connection.
 
+        If a local TGIS instance is maintained, do nothing.
+
         If the model connection is already registered, do nothing.
 
         Otherwise create and register the model connection using the TGISBackend's
@@ -198,7 +200,20 @@ class TGISBackend(BackendBase):
         If `fill_with_defaults == True`, missing keys in `conn_cfg` will be populated
         with defaults from the TGISBackend's config connection.
         """
+        # Don't attempt registering a remote model if running local TGIS instance
+        if self.local_tgis:
+            log.debug(
+                "<TGB99277346D> Running a local TGIS instance... won't register a "
+                "remote model connection"
+            )
+            return
+
         if model_id in self._model_connections:
+            log.debug(
+                "<TGB08621956D> remote model connection for model %s already exists... "
+                "nothing to register",
+                model_id,
+            )
             return  # Model connection exists --> do nothing
 
         # Craft new connection config
@@ -211,6 +226,10 @@ class TGISBackend(BackendBase):
             new_conn_cfg.update(conn_cfg)
 
         # Create model connection
+        error.value_check(
+            "<TGB17891341E>", new_conn_cfg, "TGISConnection config is empty"
+        )
+
         model_conn = TGISConnection.from_config(model_id, new_conn_cfg)
 
         error.value_check("<TGB81270235E>", model_conn is not None)
@@ -219,6 +238,10 @@ class TGISBackend(BackendBase):
         if self._test_connections:
             model_conn = self._test_connection(model_conn)
         if model_conn is not None:
+            log.debug(
+                "<TGB16640078D> Registering new remote model connection for %s",
+                model_id,
+            )
             self._safely_update_state(model_id, model_conn, new_conn_cfg)
 
     def get_client(self, model_id: str) -> generation_pb2_grpc.GenerationServiceStub:
