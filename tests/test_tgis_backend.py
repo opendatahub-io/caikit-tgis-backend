@@ -16,6 +16,9 @@ Unit tests for TGIS backend
 """
 
 # Standard
+from copy import deepcopy
+from dataclasses import asdict
+from typing import Any, Dict, Optional
 from unittest import mock
 import os
 import tempfile
@@ -32,15 +35,15 @@ import caikit
 # Local
 from caikit_tgis_backend import TGISBackend
 from caikit_tgis_backend.protobufs import generation_pb2
-from tests.tgis_mock import (
-    TGISMock,
-    tgis_mock_insecure,
-    tgis_mock_insecure_health_delay,
-    tgis_mock_mtls,
-    tgis_mock_tls,
-)
+from caikit_tgis_backend.tgis_connection import TGISConnection
+from tests.tgis_mock import tgis_mock_insecure  # noqa
+from tests.tgis_mock import tgis_mock_insecure_health_delay  # noqa
+from tests.tgis_mock import tgis_mock_mtls  # noqa
+from tests.tgis_mock import tgis_mock_tls  # noqa
+from tests.tgis_mock import TGISMock
 
 ## Helpers #####################################################################
+
 
 # for convenience in managing the multiple parts of the fixture
 class MockTGISFixture:
@@ -575,7 +578,6 @@ def test_tgis_backend_config_load_prompt_artifacts():
     """Make sure that loading prompt artifacts behaves as expected"""
     with tempfile.TemporaryDirectory() as source_dir:
         with tempfile.TemporaryDirectory() as prompt_dir:
-
             # Make some source files
             source_fnames = ["prompt1.pt", "prompt2.pt"]
             source_files = [os.path.join(source_dir, fname) for fname in source_fnames]
@@ -679,6 +681,94 @@ def test_tgis_backend_config_load_prompt_artifacts():
             # Make sure unknown model raises
             with pytest.raises(ValueError):
                 tgis_be.load_prompt_artifacts("buz", prompt_id1, source_files[0])
+
+
+@pytest.mark.parametrize(
+    argnames=["model_id", "conn_cfg", "fill", "expected_conn_cfg"],
+    argvalues=[
+        (
+            "model1",
+            None,
+            False,
+            {
+                "hostname": "localhost:1234",
+                "model_id": "model1",
+                "lb_policy": "abc",
+            },
+        ),
+        (
+            "model1",
+            None,
+            True,
+            {
+                "hostname": "localhost:1234",
+                "model_id": "model1",
+                "lb_policy": "abc",
+            },
+        ),
+        (
+            "model1",
+            {"hostname": "myhost"},
+            False,
+            {"hostname": "myhost", "model_id": "model1"},
+        ),
+        (
+            "model1",
+            {"hostname": "myhost"},
+            True,
+            {"hostname": "myhost", "model_id": "model1", "lb_policy": "abc"},
+        ),
+    ],
+)
+def test_tgis_backend_register_model_connection(
+    model_id: str,
+    conn_cfg: Optional[dict],
+    fill: bool,
+    expected_conn_cfg: Dict[str, Any],
+):
+    """Test that register_model_connection correctly adds a TGISConnection to the _model_connections dictionary"""
+    tgis_be = TGISBackend(
+        {
+            "connection": {"hostname": "localhost:1234", "grpc_lb_policy_name": "abc"},
+            "remote_models": {},
+        }
+    )
+
+    # Assert new model is not in backend
+    assert model_id not in tgis_be._remote_models_cfg
+    assert model_id not in tgis_be._model_connections
+    backup_base_cfg = deepcopy(tgis_be._base_connection_cfg)
+
+    # Register model
+    tgis_be.register_model_connection(model_id, conn_cfg, fill_with_defaults=fill)
+    assert model_id in tgis_be._remote_models_cfg
+    assert model_id in tgis_be._model_connections
+    assert isinstance(tgis_be._model_connections[model_id], TGISConnection)
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
+
+    # Re-register -> no change to existing model
+    tgis_be.register_model_connection(model_id, {"hostname": "{model_id}.mycluster"})
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
+
+    # Confirm get_connection works
+    conn = tgis_be.get_connection(model_id, create=False)
+    assert isinstance(conn, TGISConnection)
+    assert {
+        k: v
+        for k, v in asdict(tgis_be._model_connections[model_id]).items()
+        if v is not None
+    } == expected_conn_cfg
+
+    # Confirm that the source _base_connection_cfg wasn't mutated
+    assert tgis_be._base_connection_cfg == backup_base_cfg
 
 
 ## Failure Tests ###############################################################

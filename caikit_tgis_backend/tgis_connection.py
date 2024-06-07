@@ -20,7 +20,7 @@ from __future__ import annotations
 from collections.abc import Container
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 import os
 import shutil
 
@@ -90,19 +90,22 @@ class TGISConnection:
     TLS_HN_OVERRIDE_KEY = "hostname_override"
 
     @classmethod
-    def from_config(cls, model_id: str, config: dict) -> Optional["TGISConnection"]:
+    def from_config(
+        cls, model_id: str, config: Dict[str, Any]
+    ) -> Optional["TGISConnection"]:
         """Create an instance from a connection template and a model_id"""
         hostname = config.get(cls.HOSTNAME_KEY)
         if hostname:
-            hostname = hostname.format(
-                **{
+            error.type_check("<TGB57775870E>", str, hostname=hostname)
+
+            hostname = hostname.format_map(
+                {
                     cls.HOSTNAME_TEMPLATE_MODEL_ID: model_id,
                 }
             )
             log.debug("Resolved hostname [%s] for model %s", hostname, model_id)
 
             tls_hostname_override = config.get(cls.TLS_HN_OVERRIDE_KEY)
-
             lb_policy = config.get(cls.LB_POLICY_KEY) or None
             error.type_check(
                 "<TGB17223790E>",

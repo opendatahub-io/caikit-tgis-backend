@@ -14,6 +14,7 @@
 """
 Unit tests for the TGISConnection class
 """
+
 # Standard
 from contextlib import contextmanager
 from pathlib import Path
@@ -27,7 +28,7 @@ import tls_test_tools
 
 # Local
 from caikit_tgis_backend.tgis_connection import TGISConnection
-from tests.tgis_mock import tgis_mock_insecure
+from tests.tgis_mock import tgis_mock_insecure  # noqa
 
 
 @contextmanager
