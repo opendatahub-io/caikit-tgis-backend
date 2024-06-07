@@ -203,13 +203,15 @@ class TGISBackend(BackendBase):
         # Don't attempt registering a remote model if running local TGIS instance
         if self.local_tgis:
             log.debug(
-                "<TGB99277346D> Running a local TGIS instance... won't register a remote model connection"
+                "<TGB99277346D> Running a local TGIS instance... won't register a "
+                "remote model connection"
             )
             return
 
         if model_id in self._model_connections:
             log.debug(
-                "<TGB08621956D> remote model connection for model %s already exists... nothing to register",
+                "<TGB08621956D> remote model connection for model %s already exists... "
+                "nothing to register",
                 model_id,
             )
             return  # Model connection exists --> do nothing
