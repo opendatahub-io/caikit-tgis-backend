@@ -312,7 +312,8 @@ class TGISBackend(BackendBase):
         remote_models_cfg: Optional[Dict[str, Any]] = None,
     ):
         """
-        Update the `_model_connections` and `_remote_models_cfg` state dictionaries in a thread safe manner
+        Update the `_model_connections` and `_remote_models_cfg` state dictionaries in a
+        thread safe manner.
         """
         # NOTE: setdefault used here to avoid the need to hold the mutex
         #   when running the connection test. It's possible that two
