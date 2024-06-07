@@ -14,6 +14,7 @@
 """This module implements a TGIS backend configuration"""
 
 # Standard
+from copy import deepcopy
 from threading import Lock
 from typing import Any, Dict, Optional
 
@@ -197,10 +198,10 @@ class TGISBackend(BackendBase):
         # Craft new connection config
         new_conn_cfg = {}
         if conn_cfg is None:
-            new_conn_cfg = self._base_connection_cfg
+            new_conn_cfg = deepcopy(self._base_connection_cfg)
         else:
             if fill_with_defaults:
-                new_conn_cfg = self._base_connection_cfg
+                new_conn_cfg = deepcopy(self._base_connection_cfg)
             new_conn_cfg.update(conn_cfg)
 
         # Create model connection

@@ -16,6 +16,7 @@ Unit tests for TGIS backend
 """
 
 # Standard
+from copy import deepcopy
 from dataclasses import asdict
 from typing import Any, Dict, Optional
 from unittest import mock
@@ -736,6 +737,7 @@ def test_tgis_backend_register_model_connection(
     # Assert new model is not in backend
     assert model_id not in tgis_be._remote_models_cfg
     assert model_id not in tgis_be._model_connections
+    backup_base_cfg = deepcopy(tgis_be._base_connection_cfg)
 
     # Register model
     tgis_be.register_model_connection(model_id, conn_cfg, fill_with_defaults=fill)
@@ -764,6 +766,9 @@ def test_tgis_backend_register_model_connection(
         for k, v in asdict(tgis_be._model_connections[model_id]).items()
         if v is not None
     } == expected_conn_cfg
+
+    # Confirm that the source _base_connection_cfg wasn't mutated
+    assert tgis_be._base_connection_cfg == backup_base_cfg
 
 
 ## Failure Tests ###############################################################
