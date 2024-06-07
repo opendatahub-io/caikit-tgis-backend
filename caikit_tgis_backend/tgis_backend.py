@@ -202,9 +202,16 @@ class TGISBackend(BackendBase):
         """
         # Don't attempt registering a remote model if running local TGIS instance
         if self.local_tgis:
+            log.debug(
+                "<TGB99277346D> Running a local TGIS instance... won't register a remote model connection"
+            )
             return
 
         if model_id in self._model_connections:
+            log.debug(
+                "<TGB08621956D> remote model connection for model %s already exists... nothing to register",
+                model_id,
+            )
             return  # Model connection exists --> do nothing
 
         # Craft new connection config
@@ -229,6 +236,10 @@ class TGISBackend(BackendBase):
         if self._test_connections:
             model_conn = self._test_connection(model_conn)
         if model_conn is not None:
+            log.debug(
+                "<TGB16640078D> Registering new remote model connection for %s",
+                model_id,
+            )
             self._safely_update_state(model_id, model_conn, new_conn_cfg)
 
     def get_client(self, model_id: str) -> generation_pb2_grpc.GenerationServiceStub:
