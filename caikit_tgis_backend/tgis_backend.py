@@ -110,19 +110,9 @@ class TGISBackend(BackendBase):
                 model_id,
             )
             if self._test_connections:
-                try:
-                    model_conn.test_connection(timeout=self._connect_timeout)
-                except grpc.RpcError as err:
-                    log.warning(
-                        "<TGB95244222W>",
-                        "Unable to connect to model %s: %s",
-                        model_id,
-                        err,
-                        exc_info=True,
-                    )
-                    model_conn = None
+                model_conn = self._test_connection(model_conn, self._connect_timeout)
             if model_conn is not None:
-                self._model_connections[model_id] = model_conn
+                self._safely_update_state(model_id, model_conn)
 
         # We manage a local TGIS instance if there are no remote connections
         # specified as either a valid base connection or remote_connections
@@ -178,9 +168,9 @@ class TGISBackend(BackendBase):
         if not model_conn and create and not self.local_tgis and conn_cfg:
             model_conn = TGISConnection.from_config(model_id, conn_cfg)
             if self._test_connections:
-                self._test_connection(model_conn)
+                model_conn = self._test_connection(model_conn)
             if model_conn is not None:
-                self._safely_update_state(model_id, model_conn, conn_cfg)
+                self._safely_update_state(model_id, model_conn)
 
         return model_conn
 
@@ -202,26 +192,27 @@ class TGISBackend(BackendBase):
         with defaults from the TGISBackend's config connection.
         """
         if model_id in self._model_connections:
-            # Model connection exists --> do nothing
-            return
+            return  # Model connection exists --> do nothing
 
-        # Create model connection...
+        # Craft new connection config
+        new_conn_cfg = {}
         if conn_cfg is None:
-            new_conn_conf = self._base_connection_cfg
-            model_conn = TGISConnection.from_config(model_id, new_conn_conf)
+            new_conn_cfg = self._base_connection_cfg
         else:
-            new_conn_conf: Dict[str, Any] = (
-                self._base_connection_cfg if fill_with_defaults else {}
-            )
-            new_conn_conf.update(conn_cfg)
-            model_conn = TGISConnection.from_config(model_id, new_conn_conf)
+            if fill_with_defaults:
+                new_conn_cfg = self._base_connection_cfg
+            new_conn_cfg.update(conn_cfg)
+
+        # Create model connection
+        model_conn = TGISConnection.from_config(model_id, new_conn_cfg)
 
         error.value_check("<TGB81270235E>", model_conn is not None)
 
+        # Register model connection
         if self._test_connections:
-            self._test_connection(model_conn)
+            model_conn = self._test_connection(model_conn)
         if model_conn is not None:
-            self._safely_update_state(model_id, model_conn, new_conn_conf)
+            self._safely_update_state(model_id, model_conn, new_conn_cfg)
 
     def get_client(self, model_id: str) -> generation_pb2_grpc.GenerationServiceStub:
         model_conn = self.get_connection(model_id)
@@ -291,12 +282,17 @@ class TGISBackend(BackendBase):
             self._managed_tgis is not None and self._managed_tgis.is_ready()
         )
 
-    def _test_connection(self, model_conn: Optional[TGISConnection]):
+    def _test_connection(
+        self, model_conn: Optional[TGISConnection], timeout: Optional[float] = None
+    ) -> Optional[TGISConnection]:
+        """
+        Returns the TGISConnection if successful, else returns None.
+        """
         if model_conn is None:
             return
 
         try:
-            model_conn.test_connection()
+            model_conn.test_connection(timeout)
         except grpc.RpcError as err:
             log.warning(
                 "<TGB10601575W>",
@@ -306,6 +302,8 @@ class TGISBackend(BackendBase):
                 exc_info=True,
             )
             model_conn = None
+
+        return model_conn
 
     def _safely_update_state(
         self,
