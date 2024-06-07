@@ -190,6 +190,8 @@ class TGISBackend(BackendBase):
         """
         Register a remote model connection.
 
+        If a local TGIS instance is maintained, do nothing.
+
         If the model connection is already registered, do nothing.
 
         Otherwise create and register the model connection using the TGISBackend's
@@ -198,6 +200,10 @@ class TGISBackend(BackendBase):
         If `fill_with_defaults == True`, missing keys in `conn_cfg` will be populated
         with defaults from the TGISBackend's config connection.
         """
+        # Don't attempt registering a remote model if running local TGIS instance
+        if self.local_tgis:
+            return
+
         if model_id in self._model_connections:
             return  # Model connection exists --> do nothing
 
@@ -211,6 +217,10 @@ class TGISBackend(BackendBase):
             new_conn_cfg.update(conn_cfg)
 
         # Create model connection
+        error.value_check(
+            "<TGB17891341E>", new_conn_cfg, "TGISConnection config is empty"
+        )
+
         model_conn = TGISConnection.from_config(model_id, new_conn_cfg)
 
         error.value_check("<TGB81270235E>", model_conn is not None)

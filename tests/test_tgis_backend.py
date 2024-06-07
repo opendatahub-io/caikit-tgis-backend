@@ -771,6 +771,24 @@ def test_tgis_backend_register_model_connection(
     assert tgis_be._base_connection_cfg == backup_base_cfg
 
 
+def test_tgis_backend_register_model_connection_local():
+    tgis_be = TGISBackend()
+
+    # Confirm marked as local TGIS instance with no base connection config
+    assert tgis_be.local_tgis
+    assert not tgis_be._base_connection_cfg
+    assert not tgis_be._model_connections
+    assert not tgis_be._remote_models_cfg
+
+    # Register action should do nothing
+    tgis_be.register_model_connection("should do nothing")
+
+    # Confirm nothing was done
+    assert not tgis_be._base_connection_cfg
+    assert not tgis_be._model_connections
+    assert not tgis_be._remote_models_cfg
+
+
 ## Failure Tests ###############################################################
 
 
