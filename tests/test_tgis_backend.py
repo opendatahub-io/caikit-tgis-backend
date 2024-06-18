@@ -102,7 +102,7 @@ class TestServicerContext:
     A dummy class for mimicking ServicerContext invocation metadata storage.
     """
 
-    def __init__(self, metadata: dict[str, Union[str, bytes]]):
+    def __init__(self, metadata: Dict[str, Union[str, bytes]]):
         self.metadata = metadata
 
     def invocation_metadata(self):
