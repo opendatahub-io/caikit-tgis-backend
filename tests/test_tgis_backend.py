@@ -959,3 +959,32 @@ def test_get_route_info(context, route_info: Optional[str]):
     else:
         actual_route_info = TGISBackend.get_route_info(context)
         assert actual_route_info == route_info
+
+
+def test_handle_runtime_context_with_route_info():
+    """Test that with route info present, handle_runtime_context updates the
+    model connection
+    """
+    route_info = "sometext"
+    context = fastapi.Request(
+        {
+            "type": "http",
+            "headers": [
+                (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), route_info.encode("utf-8"))
+            ],
+        }
+    )
+
+    tgis_be = TGISBackend(
+        {
+            "connection": {"hostname": "foobar:1234"},
+            "test_connections": False,
+        }
+    )
+    assert not tgis_be._model_connections
+
+    # Handle the connection and make sure model_connections is updated
+    model_id = "my-model"
+    tgis_be.handle_runtime_context(model_id, context)
+    assert model_id in tgis_be._model_connections
+    assert (conn := tgis_be.get_connection(model_id)) and conn.hostname == route_info

@@ -179,6 +179,24 @@ class TGISBackend(BackendBase):
             log.debug("Unloading model %s on stop", model_id)
             self.unload_model(model_id)
 
+    def handle_runtime_context(
+        self,
+        model_id: str,
+        runtime_context: RuntimeServerContextType,
+    ):
+        """Handle the runtime context for a request for the given model"""
+        if route_info := self.get_route_info(runtime_context):
+            log.debug(
+                "<TGB10705560D> Registering remote model connection with context "
+                "override: 'hostname: %s'",
+                route_info,
+            )
+            self.register_model_connection(
+                model_id,
+                {"hostname": route_info},
+                fill_with_defaults=True,
+            )
+
     ## Backend user interface ##
 
     def get_connection(
