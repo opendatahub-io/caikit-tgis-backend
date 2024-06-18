@@ -21,10 +21,21 @@ from typing import Any, Dict, Optional
 # Third Party
 import grpc
 
+# Since fastapi is optional in caikit, it may not be available
+try:
+    # Third Party
+    import fastapi
+
+    HAVE_FASTAPI = True
+except ImportError:
+    HAVE_FASTAPI = False
+    fastapi = None
+
 # First Party
 from caikit.core.exceptions import error_handler
 from caikit.core.module_backends.backend_types import register_backend_type
 from caikit.core.module_backends.base import BackendBase
+from caikit.interfaces.runtime.data_model import RuntimeServerContextType
 import alog
 
 # Local
@@ -53,6 +64,10 @@ class TGISBackend(BackendBase):
 
     TGIS_LOCAL_GRPC_PORT = 50055
     TGIS_LOCAL_HTTP_PORT = 3000
+
+    # HTTP Header / gRPC Metadata key used to identify a route override in an
+    # inbound request context
+    ROUTE_INFO_HEADER_KEY = "x-route-info"
 
     ## Backend Interface ##
 
@@ -311,6 +326,34 @@ class TGISBackend(BackendBase):
         return not self.local_tgis or (
             self._managed_tgis is not None and self._managed_tgis.is_ready()
         )
+
+    @classmethod
+    def get_route_info(
+        cls,
+        context: Optional[RuntimeServerContextType],
+    ) -> Optional[str]:
+        """Get the string value of the x-route-info header/metadata if present
+
+        Args:
+            context (Optional[RuntimeServerContextType]): The grpc or fastapi
+                request context
+
+        Returns:
+            route_info (Optional[str]): The header/metadata value if present,
+                otherwise None
+        """
+        if context is None:
+            return context
+        if isinstance(context, grpc.ServicerContext):
+            return dict(context.invocation_metadata()).get(cls.ROUTE_INFO_HEADER_KEY)
+        if HAVE_FASTAPI and isinstance(context, fastapi.Request):
+            return context.headers.get(cls.ROUTE_INFO_HEADER_KEY)
+        error.log_raise(
+            "<TGB92615097E>",
+            TypeError(f"context is of an unsupported type: {type(context)}"),
+        )
+
+    ## Implementation Details ##
 
     def _test_connection(
         self, model_conn: Optional[TGISConnection], timeout: Optional[float] = None
