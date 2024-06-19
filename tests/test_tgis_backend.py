@@ -947,7 +947,7 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
             TestServicerContext({"route-info": "sometext"}),
             None,
         ),
-        ("should raise ValueError", None),
+        ("should raise TypeError", None),
         (None, None),
         # Uncertain how to create a grpc.ServicerContext object
     ],
