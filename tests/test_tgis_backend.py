@@ -18,13 +18,14 @@ Unit tests for TGIS backend
 # Standard
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 from unittest import mock
 import os
 import tempfile
 import time
 
 # Third Party
+import fastapi
 import grpc
 import pytest
 import tls_test_tools
@@ -94,6 +95,18 @@ def mock_tgis_fixture():
         mock_popen_func.return_value = process_mock
         yield MockTGISFixture(mock_popen_func, process_mock, mock_tgis)
     mock_tgis.stop()
+
+
+class TestServicerContext:
+    """
+    A dummy class for mimicking ServicerContext invocation metadata storage.
+    """
+
+    def __init__(self, metadata: Dict[str, Union[str, bytes]]):
+        self.metadata = metadata
+
+    def invocation_metadata(self):
+        return list(self.metadata.items())
 
 
 ## Conn Config #################################################################
@@ -904,3 +917,74 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
     conn = tgis_be.get_connection(model_id)
     conn.test_connection()
     conn.test_connection(timeout=1)
+
+
+@pytest.mark.parametrize(
+    argnames=["context", "route_info"],
+    argvalues=[
+        (
+            fastapi.Request(
+                {
+                    "type": "http",
+                    "headers": [
+                        (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), b"sometext")
+                    ],
+                }
+            ),
+            "sometext",
+        ),
+        (
+            fastapi.Request(
+                {"type": "http", "headers": [(b"route-info", b"sometext")]}
+            ),
+            None,
+        ),
+        (
+            TestServicerContext({TGISBackend.ROUTE_INFO_HEADER_KEY: "sometext"}),
+            "sometext",
+        ),
+        (
+            TestServicerContext({"route-info": "sometext"}),
+            None,
+        ),
+        ("should raise TypeError", None),
+        (None, None),
+        # Uncertain how to create a grpc.ServicerContext object
+    ],
+)
+def test_get_route_info(context, route_info: Optional[str]):
+    if not isinstance(context, (fastapi.Request, grpc.ServicerContext, type(None))):
+        with pytest.raises(TypeError):
+            TGISBackend.get_route_info(context)
+    else:
+        actual_route_info = TGISBackend.get_route_info(context)
+        assert actual_route_info == route_info
+
+
+def test_handle_runtime_context_with_route_info():
+    """Test that with route info present, handle_runtime_context updates the
+    model connection
+    """
+    route_info = "sometext"
+    context = fastapi.Request(
+        {
+            "type": "http",
+            "headers": [
+                (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), route_info.encode("utf-8"))
+            ],
+        }
+    )
+
+    tgis_be = TGISBackend(
+        {
+            "connection": {"hostname": "foobar:1234"},
+            "test_connections": False,
+        }
+    )
+    assert not tgis_be._model_connections
+
+    # Handle the connection and make sure model_connections is updated
+    model_id = "my-model"
+    tgis_be.handle_runtime_context(model_id, context)
+    assert model_id in tgis_be._model_connections
+    assert (conn := tgis_be.get_connection(model_id)) and conn.hostname == route_info
