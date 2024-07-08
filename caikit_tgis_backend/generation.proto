@@ -27,7 +27,9 @@
 
  message BatchedGenerationRequest {
    string model_id = 1;
+   // Deprecated in favor of adapter_id
    optional string prefix_id = 2;
+   optional string adapter_id = 4;
    repeated GenerationRequest requests = 3;
 
    Parameters params = 10;
@@ -35,7 +37,9 @@
 
  message SingleGenerationRequest {
    string model_id = 1;
+   // Deprecated in favor of adapter_id
    optional string prefix_id = 2;
+   optional string adapter_id = 4;
    GenerationRequest request = 3;
 
    Parameters params = 10;
@@ -54,6 +58,8 @@
    uint32 generated_token_count = 2;
    string text = 4;
    StopReason stop_reason = 7;
+   // The stop sequence encountered, iff stop_reason == STOP_SEQUENCE
+   string stop_sequence = 11;
    // Random seed used, not applicable for greedy requests
    uint64 seed = 10;
 
@@ -89,7 +95,7 @@
      // Factor of exponential decay
      float decay_factor = 2;
    }
-
+ 
    // Default (0.0) means no penalty (equivalent to 1.0)
    // 1.2 is a recommended value
    float repetition_penalty = 1;
@@ -97,6 +103,31 @@
    // Exponentially increases the score of the EOS token
    // once start_index tokens have been generated
    optional LengthPenalty length_penalty = 2;
+ 
+   enum ResponseFormat {
+     // Plain text, no constraints
+     TEXT = 0;
+     // Valid json
+     JSON = 1;
+   }
+ 
+   message StringChoices {
+     repeated string choices = 1;
+   }
+ 
+   // Mutually-exclusive guided decoding options
+   oneof guided {
+     // Output will be in the specified format
+     ResponseFormat format = 3;
+     // Output will follow the provided JSON schema
+     string json_schema = 4;
+     // Output will follow the provided regex pattern
+     string regex = 5;
+     // Output will be exactly one of the specified choices
+     StringChoices choice = 6;
+     // Output will follow the provided context free grammar
+     string grammar = 7;
+   }
  }
 
 
@@ -121,7 +152,9 @@
    // Default (0) means no time limit
    uint32 time_limit_millis = 3;
    repeated string stop_sequences = 4;
-
+   // If not specified, default behavior depends on server setting
+   optional bool include_stop_sequence = 5;
+ 
    //more to come
  }
 
@@ -193,7 +226,11 @@
  message BatchedTokenizeRequest {
    string model_id = 1;
    repeated TokenizeRequest requests = 2;
-   bool return_tokens = 3; //TBD
+   bool return_tokens = 3;
+   bool return_offsets = 4;
+ 
+   // Zero means don't truncate.
+   uint32 truncate_input_tokens = 5;
  }
 
  message BatchedTokenizeResponse {
@@ -205,10 +242,17 @@
  }
 
  message TokenizeResponse {
+   message Offset {
+     uint32 start = 1;
+     uint32 end = 2;
+   }
+ 
    uint32 token_count = 1;
-   repeated string tokens = 2; // if include_tokens = true
-
-   // We'll possibly add more later
+ 
+   // if return_tokens = true
+   repeated string tokens = 2;
+   // if return_tokens = true
+   repeated Offset offsets = 3;
  }
 
 
