@@ -5,6 +5,7 @@
  syntax = "proto3";
  package fmaas;
 
+
  service GenerationService {
    // Generates text given a text prompt, for one or more inputs
    rpc Generate (BatchedGenerationRequest) returns (BatchedGenerationResponse) {}
@@ -30,7 +31,7 @@
    optional string prefix_id = 2;
    optional string adapter_id = 4;
    repeated GenerationRequest requests = 3;
- 
+
    Parameters params = 10;
  }
 
@@ -40,7 +41,7 @@
    optional string prefix_id = 2;
    optional string adapter_id = 4;
    GenerationRequest request = 3;
- 
+
    Parameters params = 10;
  }
 
@@ -61,10 +62,10 @@
    string stop_sequence = 11;
    // Random seed used, not applicable for greedy requests
    uint64 seed = 10;
- 
+
    // Individual generated tokens and associated details, if requested
    repeated TokenInfo tokens = 8;
- 
+
    // Input tokens and associated details, if requested
    repeated TokenInfo input_tokens = 9;
  }
@@ -98,7 +99,7 @@
    // Default (0.0) means no penalty (equivalent to 1.0)
    // 1.2 is a recommended value
    float repetition_penalty = 1;
- 
+
    // Exponentially increases the score of the EOS token
    // once start_index tokens have been generated
    optional LengthPenalty length_penalty = 2;
@@ -139,7 +140,7 @@
    float top_p = 3;
    // Default (0) means disabled (equivalent to 1.0)
    float typical_p = 4;
- 
+
    optional uint64 seed = 5;
  }
 
@@ -206,13 +207,13 @@
    float logprob = 3;
    // One-based rank relative to other tokens, if requested
    uint32 rank = 4;
- 
+
    message TopToken {
      // uint32 id = 1;  // TBD
      string text = 2;
      float logprob = 3;
    }
- 
+
    // Top N candidate tokens at this position, if requested
    // May or may not include this token
    repeated TopToken top_tokens = 5;
@@ -257,7 +258,7 @@
 
  // ============================================================================================================
  // Model Info API
- 
+
  message ModelInfoRequest {
    string model_id = 1;
  }
@@ -267,7 +268,7 @@
      DECODER_ONLY = 0;
      ENCODER_DECODER = 1;
    }
- 
+
    ModelKind model_kind = 1;
    uint32 max_sequence_length = 2;
    uint32 max_new_tokens = 3;
