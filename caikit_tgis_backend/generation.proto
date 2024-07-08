@@ -4,8 +4,7 @@
 
  syntax = "proto3";
  package fmaas;
- 
- 
+
  service GenerationService {
    // Generates text given a text prompt, for one or more inputs
    rpc Generate (BatchedGenerationRequest) returns (BatchedGenerationResponse) {}
@@ -16,15 +15,15 @@
    // Model info
    rpc ModelInfo (ModelInfoRequest) returns (ModelInfoResponse) {}
  }
- 
+
  // ============================================================================================================
  // Generation API
- 
+
  enum DecodingMethod {
    GREEDY = 0;
    SAMPLE = 1;
  }
- 
+
  message BatchedGenerationRequest {
    string model_id = 1;
    // Deprecated in favor of adapter_id
@@ -34,7 +33,7 @@
  
    Parameters params = 10;
  }
- 
+
  message SingleGenerationRequest {
    string model_id = 1;
    // Deprecated in favor of adapter_id
@@ -44,15 +43,15 @@
  
    Parameters params = 10;
  }
- 
+
  message BatchedGenerationResponse {
    repeated GenerationResponse responses = 1;
  }
- 
+
  message GenerationRequest {
    string text = 2;
  }
- 
+
  message GenerationResponse {
    uint32 input_token_count = 6;
    uint32 generated_token_count = 2;
@@ -69,7 +68,7 @@
    // Input tokens and associated details, if requested
    repeated TokenInfo input_tokens = 9;
  }
- 
+
  message Parameters {
    // The high level decoding approach
    DecodingMethod method = 1;
@@ -87,7 +86,7 @@
    // Zero means don't truncate.
    uint32 truncate_input_tokens = 6;
  }
- 
+
  message DecodingParameters {
    message LengthPenalty {
      // Start the decay after this number of tokens have been generated
@@ -129,8 +128,8 @@
      string grammar = 7;
    }
  }
- 
- 
+
+
  message SamplingParameters {
    // Default (0.0) means disabled (equivalent to 1.0)
    float temperature = 1;
@@ -143,7 +142,7 @@
  
    optional uint64 seed = 5;
  }
- 
+
  message StoppingCriteria {
    // Default (0) is currently 20
    uint32 max_new_tokens = 1;
@@ -157,7 +156,7 @@
  
    //more to come
  }
- 
+
  message ResponseOptions {
    // Include input text
    bool input_text = 1;
@@ -180,7 +179,7 @@
    // Applicable only if generated_tokens == true and/or input_tokens == true
    uint32 top_n_tokens = 6;
  }
- 
+
  enum StopReason {
    // Possibly more tokens to be streamed
    NOT_FINISHED = 0;
@@ -199,7 +198,7 @@
    // Decoding error
    ERROR = 7;
  }
- 
+
  message TokenInfo {
    // uint32 id = 1;  // TBD
    string text = 2;
@@ -218,11 +217,11 @@
    // May or may not include this token
    repeated TopToken top_tokens = 5;
  }
- 
- 
+
+
  // ============================================================================================================
  // Tokenization API
- 
+
  message BatchedTokenizeRequest {
    string model_id = 1;
    repeated TokenizeRequest requests = 2;
@@ -232,15 +231,15 @@
    // Zero means don't truncate.
    uint32 truncate_input_tokens = 5;
  }
- 
+
  message BatchedTokenizeResponse {
    repeated TokenizeResponse responses = 1;
  }
- 
+
  message TokenizeRequest {
    string text = 1;
  }
- 
+
  message TokenizeResponse {
    message Offset {
      uint32 start = 1;
@@ -254,15 +253,15 @@
    // if return_tokens = true
    repeated Offset offsets = 3;
  }
- 
- 
+
+
  // ============================================================================================================
  // Model Info API
  
  message ModelInfoRequest {
    string model_id = 1;
  }
- 
+
  message ModelInfoResponse {
    enum ModelKind {
      DECODER_ONLY = 0;
@@ -273,4 +272,3 @@
    uint32 max_sequence_length = 2;
    uint32 max_new_tokens = 3;
  }
- 
