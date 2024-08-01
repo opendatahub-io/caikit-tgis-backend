@@ -16,7 +16,7 @@
 # Standard
 from copy import deepcopy
 from threading import Lock
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 # Third Party
 import grpc
@@ -369,7 +369,9 @@ class TGISBackend(BackendBase):
         if context is None:
             return context
         if isinstance(context, grpc.ServicerContext):
-            return context.invocation_metadata().get(cls.ROUTE_INFO_HEADER_KEY)
+            return TGISBackend._request_metadata_get(
+                context.invocation_metadata(), cls.ROUTE_INFO_HEADER_KEY
+            )
 
         if HAVE_FASTAPI and isinstance(context, fastapi.Request):
             return TGISBackend._request_header_get(context, cls.ROUTE_INFO_HEADER_KEY)
@@ -435,6 +437,24 @@ class TGISBackend(BackendBase):
         for header_key, header_value in items:
             if header_key.lower() == get_header_key:
                 return header_value
+
+    @classmethod
+    def _request_metadata_get(
+        cls, metadata: tuple[str, Union[str, bytes]], key: str
+    ) -> Optional[str]:
+        """
+        Returns the first matching value for the metadata key (case insensitive).
+        If no matching metadata was found return None.
+        """
+        # https://grpc.github.io/grpc/python/glossary.html#term-metadatum
+        get_metadata_key = key.lower()
+
+        for metadata_key, metadata_value in metadata:
+            if str(metadata_key).lower() == get_metadata_key:
+                if isinstance(metadata_value, str):
+                    return metadata_value
+                if isinstance(metadata_value, bytes):
+                    return metadata_value.decode()
 
 
 # Register local backend
