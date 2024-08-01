@@ -927,29 +927,79 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
                 {
                     "type": "http",
                     "headers": [
-                        (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), b"sometext")
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.encode("latin-1"),
+                            "http exact".encode("latin-1"),
+                        )
                     ],
                 }
             ),
-            "sometext",
+            "http exact",
         ),
         (
             fastapi.Request(
-                {"type": "http", "headers": [(b"route-info", b"sometext")]}
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.upper().encode("latin-1"),
+                            "http upper-case".encode("latin-1"),
+                        )
+                    ],
+                }
+            ),
+            "http upper-case",
+        ),
+        (
+            fastapi.Request(
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.title().encode("latin-1"),
+                            "http title-case".encode("latin-1"),
+                        )
+                    ],
+                }
+            ),
+            "http title-case",
+        ),
+        (
+            fastapi.Request(
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            "route-info".encode("latin-1"),
+                            "http not-found".encode("latin-1"),
+                        )
+                    ],
+                }
             ),
             None,
         ),
         (
-            TestServicerContext({TGISBackend.ROUTE_INFO_HEADER_KEY: "sometext"}),
-            "sometext",
+            TestServicerContext({TGISBackend.ROUTE_INFO_HEADER_KEY: "grpc exact"}),
+            "grpc exact",
         ),
         (
-            TestServicerContext({"route-info": "sometext"}),
+            TestServicerContext(
+                {TGISBackend.ROUTE_INFO_HEADER_KEY.upper(): "grpc upper-case"}
+            ),
+            "grpc upper-case",
+        ),
+        (
+            TestServicerContext(
+                {TGISBackend.ROUTE_INFO_HEADER_KEY.title(): "grpc title-case"}
+            ),
+            "grpc title-case",
+        ),
+        (
+            TestServicerContext({"route-info": "grpc not found"}),
             None,
         ),
         ("should raise TypeError", None),
         (None, None),
-        # Uncertain how to create a grpc.ServicerContext object
     ],
 )
 def test_get_route_info(context, route_info: Optional[str]):
@@ -969,9 +1019,7 @@ def test_handle_runtime_context_with_route_info():
     context = fastapi.Request(
         {
             "type": "http",
-            "headers": [
-                (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), route_info.encode("utf-8"))
-            ],
+            "headers": [(TGISBackend.ROUTE_INFO_HEADER_KEY, route_info)],
         }
     )
 

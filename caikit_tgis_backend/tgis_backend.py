@@ -196,6 +196,11 @@ class TGISBackend(BackendBase):
                 {"hostname": route_info},
                 fill_with_defaults=True,
             )
+        else:
+            log.debug(
+                "<TGB32948346D> No %s context override found",
+                self.ROUTE_INFO_HEADER_KEY,
+            )
 
     ## Backend user interface ##
 
@@ -351,6 +356,7 @@ class TGISBackend(BackendBase):
         context: Optional[RuntimeServerContextType],
     ) -> Optional[str]:
         """Get the string value of the x-route-info header/metadata if present
+        in a case insensitive manner.
 
         Args:
             context (Optional[RuntimeServerContextType]): The grpc or fastapi
@@ -363,9 +369,10 @@ class TGISBackend(BackendBase):
         if context is None:
             return context
         if isinstance(context, grpc.ServicerContext):
-            return dict(context.invocation_metadata()).get(cls.ROUTE_INFO_HEADER_KEY)
+            return context.invocation_metadata().get(cls.ROUTE_INFO_HEADER_KEY)
+
         if HAVE_FASTAPI and isinstance(context, fastapi.Request):
-            return context.headers.get(cls.ROUTE_INFO_HEADER_KEY)
+            return TGISBackend._request_header_get(context, cls.ROUTE_INFO_HEADER_KEY)
         error.log_raise(
             "<TGB92615097E>",
             TypeError(f"context is of an unsupported type: {type(context)}"),
@@ -414,6 +421,20 @@ class TGISBackend(BackendBase):
             self._model_connections.setdefault(model_id, model_connections)
         if remote_models_cfg:
             self._remote_models_cfg.setdefault(model_id, remote_models_cfg)
+
+    @classmethod
+    def _request_header_get(cls, request: fastapi.Request, key: str) -> Optional[str]:
+        """
+        Returns the first matching value for the header key (case insensitive).
+        If no matching header was found return None.
+        """
+        # https://github.com/encode/starlette/blob/5ed55c441126687106109a3f5e051176f88cd3e6/starlette/datastructures.py#L543
+        items: list[tuple[str, str]] = request.headers.items()
+        get_header_key = key.lower()
+
+        for header_key, header_value in items:
+            if header_key.lower() == get_header_key:
+                return header_value
 
 
 # Register local backend
