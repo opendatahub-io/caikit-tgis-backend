@@ -16,7 +16,7 @@
 # Standard
 from copy import deepcopy
 from threading import Lock
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 # Third Party
 import grpc
@@ -431,7 +431,7 @@ class TGISBackend(BackendBase):
         If no matching header was found return None.
         """
         # https://github.com/encode/starlette/blob/5ed55c441126687106109a3f5e051176f88cd3e6/starlette/datastructures.py#L543
-        items: list[tuple[str, str]] = request.headers.items()
+        items: list[Tuple[str, str]] = request.headers.items()
         get_header_key = key.lower()
 
         for header_key, header_value in items:
@@ -440,7 +440,7 @@ class TGISBackend(BackendBase):
 
     @classmethod
     def _request_metadata_get(
-        cls, metadata: tuple[str, Union[str, bytes]], key: str
+        cls, metadata: Tuple[str, Union[str, bytes]], key: str
     ) -> Optional[str]:
         """
         Returns the first matching value for the metadata key (case insensitive).

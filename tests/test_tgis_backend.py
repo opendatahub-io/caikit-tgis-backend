@@ -18,7 +18,7 @@ Unit tests for TGIS backend
 # Standard
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 from unittest import mock
 import os
 import tempfile
@@ -105,7 +105,7 @@ class TestServicerContext(grpc.ServicerContext):
     def __init__(self, metadata: Dict[str, Union[str, bytes]]):
         self.metadata = metadata
 
-    def invocation_metadata(self) -> Sequence[tuple[str, Union[str, bytes]]]:
+    def invocation_metadata(self) -> Sequence[Tuple[str, Union[str, bytes]]]:
         # https://grpc.github.io/grpc/python/glossary.html#term-metadata
         return list(self.metadata.items())
 
