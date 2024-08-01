@@ -18,7 +18,7 @@ Unit tests for TGIS backend
 # Standard
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 from unittest import mock
 import os
 import tempfile
@@ -97,7 +97,7 @@ def mock_tgis_fixture():
     mock_tgis.stop()
 
 
-class TestServicerContext:
+class TestServicerContext(grpc.ServicerContext):
     """
     A dummy class for mimicking ServicerContext invocation metadata storage.
     """
@@ -105,8 +105,51 @@ class TestServicerContext:
     def __init__(self, metadata: Dict[str, Union[str, bytes]]):
         self.metadata = metadata
 
-    def invocation_metadata(self):
+    def invocation_metadata(self) -> Sequence[Tuple[str, Union[str, bytes]]]:
+        # https://grpc.github.io/grpc/python/glossary.html#term-metadata
         return list(self.metadata.items())
+
+    def is_active(self):
+        raise NotImplementedError
+
+    def time_remaining(self):
+        raise NotImplementedError
+
+    def cancel(self):
+        raise NotImplementedError
+
+    def add_callback(self, callback):
+        raise NotImplementedError
+
+    def peer(self):
+        raise NotImplementedError
+
+    def peer_identities(self):
+        raise NotImplementedError
+
+    def peer_identity_key(self):
+        raise NotImplementedError
+
+    def auth_context(self):
+        raise NotImplementedError
+
+    def send_initial_metadata(self, initial_metadata):
+        raise NotImplementedError
+
+    def set_trailing_metadata(self, trailing_metadata):
+        raise NotImplementedError
+
+    def abort(self, code, details):
+        raise NotImplementedError
+
+    def abort_with_status(self, status):
+        raise NotImplementedError
+
+    def set_code(self, code):
+        raise NotImplementedError
+
+    def set_details(self, details):
+        raise NotImplementedError
 
 
 ## Conn Config #################################################################
@@ -927,34 +970,84 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
                 {
                     "type": "http",
                     "headers": [
-                        (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), b"sometext")
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.encode("latin-1"),
+                            "http exact".encode("latin-1"),
+                        )
                     ],
                 }
             ),
-            "sometext",
+            "http exact",
         ),
         (
             fastapi.Request(
-                {"type": "http", "headers": [(b"route-info", b"sometext")]}
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.upper().encode("latin-1"),
+                            "http upper-case".encode("latin-1"),
+                        )
+                    ],
+                }
+            ),
+            "http upper-case",
+        ),
+        (
+            fastapi.Request(
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            TGISBackend.ROUTE_INFO_HEADER_KEY.title().encode("latin-1"),
+                            "http title-case".encode("latin-1"),
+                        )
+                    ],
+                }
+            ),
+            "http title-case",
+        ),
+        (
+            fastapi.Request(
+                {
+                    "type": "http",
+                    "headers": [
+                        (
+                            "route-info".encode("latin-1"),
+                            "http not-found".encode("latin-1"),
+                        )
+                    ],
+                }
             ),
             None,
         ),
         (
-            TestServicerContext({TGISBackend.ROUTE_INFO_HEADER_KEY: "sometext"}),
-            "sometext",
+            TestServicerContext({TGISBackend.ROUTE_INFO_HEADER_KEY: "grpc exact"}),
+            "grpc exact",
         ),
         (
-            TestServicerContext({"route-info": "sometext"}),
+            TestServicerContext(
+                {TGISBackend.ROUTE_INFO_HEADER_KEY.upper(): "grpc upper-case"}
+            ),
+            "grpc upper-case",
+        ),
+        (
+            TestServicerContext(
+                {TGISBackend.ROUTE_INFO_HEADER_KEY.title(): "grpc title-case"}
+            ),
+            "grpc title-case",
+        ),
+        (
+            TestServicerContext({"route-info": "grpc not found"}),
             None,
         ),
-        ("should raise TypeError", None),
+        ("should raise TypeError", TypeError()),
         (None, None),
-        # Uncertain how to create a grpc.ServicerContext object
     ],
 )
-def test_get_route_info(context, route_info: Optional[str]):
-    if not isinstance(context, (fastapi.Request, grpc.ServicerContext, type(None))):
-        with pytest.raises(TypeError):
+def test_get_route_info(context, route_info: Union[str, None, Exception]):
+    if isinstance(route_info, Exception):
+        with pytest.raises(type(route_info)):
             TGISBackend.get_route_info(context)
     else:
         actual_route_info = TGISBackend.get_route_info(context)
@@ -970,7 +1063,10 @@ def test_handle_runtime_context_with_route_info():
         {
             "type": "http",
             "headers": [
-                (TGISBackend.ROUTE_INFO_HEADER_KEY.encode(), route_info.encode("utf-8"))
+                (
+                    TGISBackend.ROUTE_INFO_HEADER_KEY.encode("latin-1"),
+                    route_info.encode("latin-1"),
+                )
             ],
         }
     )
