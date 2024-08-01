@@ -1041,13 +1041,13 @@ def test_tgis_backend_conn_testing_enabled(tgis_mock_insecure):
             TestServicerContext({"route-info": "grpc not found"}),
             None,
         ),
-        ("should raise TypeError", None),
+        ("should raise TypeError", TypeError()),
         (None, None),
     ],
 )
-def test_get_route_info(context, route_info: Optional[str]):
-    if not isinstance(context, (fastapi.Request, grpc.ServicerContext, type(None))):
-        with pytest.raises(TypeError):
+def test_get_route_info(context, route_info: Union[str, None, Exception]):
+    if isinstance(route_info, Exception):
+        with pytest.raises(type(route_info)):
             TGISBackend.get_route_info(context)
     else:
         actual_route_info = TGISBackend.get_route_info(context)
