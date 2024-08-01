@@ -18,7 +18,7 @@ Unit tests for TGIS backend
 # Standard
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Sequence, Union
 from unittest import mock
 import os
 import tempfile
@@ -97,7 +97,7 @@ def mock_tgis_fixture():
     mock_tgis.stop()
 
 
-class TestServicerContext:
+class TestServicerContext(grpc.ServicerContext):
     """
     A dummy class for mimicking ServicerContext invocation metadata storage.
     """
@@ -105,8 +105,51 @@ class TestServicerContext:
     def __init__(self, metadata: Dict[str, Union[str, bytes]]):
         self.metadata = metadata
 
-    def invocation_metadata(self):
+    def invocation_metadata(self) -> Sequence[tuple[str, Union[str, bytes]]]:
+        # https://grpc.github.io/grpc/python/glossary.html#term-metadata
         return list(self.metadata.items())
+
+    def is_active(self):
+        raise NotImplementedError
+
+    def time_remaining(self):
+        raise NotImplementedError
+
+    def cancel(self):
+        raise NotImplementedError
+
+    def add_callback(self, callback):
+        raise NotImplementedError
+
+    def peer(self):
+        raise NotImplementedError
+
+    def peer_identities(self):
+        raise NotImplementedError
+
+    def peer_identity_key(self):
+        raise NotImplementedError
+
+    def auth_context(self):
+        raise NotImplementedError
+
+    def send_initial_metadata(self, initial_metadata):
+        raise NotImplementedError
+
+    def set_trailing_metadata(self, trailing_metadata):
+        raise NotImplementedError
+
+    def abort(self, code, details):
+        raise NotImplementedError
+
+    def abort_with_status(self, status):
+        raise NotImplementedError
+
+    def set_code(self, code):
+        raise NotImplementedError
+
+    def set_details(self, details):
+        raise NotImplementedError
 
 
 ## Conn Config #################################################################
