@@ -1062,7 +1062,12 @@ def test_handle_runtime_context_with_route_info():
     context = fastapi.Request(
         {
             "type": "http",
-            "headers": [(TGISBackend.ROUTE_INFO_HEADER_KEY, route_info)],
+            "headers": [
+                (
+                    TGISBackend.ROUTE_INFO_HEADER_KEY.encode("latin-1"),
+                    route_info.encode("latin-1"),
+                )
+            ],
         }
     )
 
